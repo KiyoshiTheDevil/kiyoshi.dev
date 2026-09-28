@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kiyoshi The Devil</title>
+  <meta name="description" content="Kiyoshi The Devil: music software and stream tools. Kodama, Tsukumo and what comes next.">
+  <meta name="theme-color" content="#121016">
+  <link rel="icon" href="img/avatar.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="bento">
+
+    <!-- Profile: a tall column on wide screens, a strip across the top on narrow ones -->
+    <section class="box profile">
+      <img class="avatar" src="img/avatar.png" alt="" width="72" height="72">
+      <div class="profile-body">
+        <h1>Kiyoshi The Devil</h1>
+        <p class="tagline">Music software and stream tools.</p>
+        <ul class="socials">
+          <li><a href="https://twitch.tv/kiyoshi_the_devil" target="_blank" rel="noopener">Twitch</a></li>
+          <li><a href="https://www.youtube.com/@kiyoshi_the_devil" target="_blank" rel="noopener">YouTube</a></li>
+          <li><a href="https://bsky.app/profile/kiyoshi-the-devil.bsky.social" target="_blank" rel="noopener">Bluesky</a></li>
+          <li><a href="https://ko-fi.com/kiyoshi_the_devil" target="_blank" rel="noopener">Ko-fi</a></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Live: what is playing right now, from ListenBrainz -->
+    <a class="box listening" id="listening" href="https://kodama.kiyoshi.dev/" target="_blank" rel="noopener">
+      <div class="cover" id="lb-cover" aria-hidden="true"></div>
+      <div class="listening-body">
+        <span class="kicker" id="lb-state">Listening with Kodama</span>
+        <span class="track" id="lb-track">Music software that feels good</span>
+        <span class="artist" id="lb-artist"></span>
+      </div>
+    </a>
+
+    <!-- Live: Twitch status -->
+    <a class="box live" id="live" href="https://twitch.tv/kiyoshi_the_devil" target="_blank" rel="noopener">
+      <span class="kicker"><span class="dot" id="live-dot"></span><span id="live-state">Twitch</span></span>
+      <span class="live-game" id="live-game">twitch.tv/kiyoshi_the_devil</span>
+    </a>
+
+    <!-- The main project -->
+    <a class="box project kodama" href="https://kodama.kiyoshi.dev/" target="_blank" rel="noopener">
+      <div class="project-head">
+        <img src="img/kodama-logo.svg" alt="Kodama" class="project-logo" height="20">
+        <span class="badge badge-alpha">Alpha</span>
+      </div>
+      <p class="project-desc">A YouTube Music client for the desktop. Synced lyrics, a visualizer, themes and extensions.</p>
+      <img class="shot" src="img/kodama.webp" alt="" loading="lazy">
+    </a>
+
+    <a class="box project tsukumo" href="#" aria-disabled="true">
+      <span class="project-name">Tsukumo</span>
+      <span class="project-sub">Stream tool</span>
+    </a>
+
+    <div class="box project soon">
+      <span class="project-name">Kodama Remote</span>
+      <span class="project-sub">For Android · coming soon</span>
+    </div>
+
+    <section class="box contact">
+      <a href="https://discord.gg/PzSsPF7KW" target="_blank" rel="noopener">Discord</a>
+      <a href="https://github.com/KiyoshiTheDevil" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://buymeacoffee.com/kiyoshi_the_devil" target="_blank" rel="noopener">Buy me a coffee</a>
+    </section>
+
+  </main>
+
+  <footer class="foot">kiyoshi.dev</footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
