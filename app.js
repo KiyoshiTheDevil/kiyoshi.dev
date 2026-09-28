@@ -3,7 +3,7 @@
 // compartment as the page first drew it, so a slow or broken service never shows an error.
 
 // Your ListenBrainz user name. Empty: the compartment keeps its static text.
-const LISTENBRAINZ_USER = "";
+const LISTENBRAINZ_USER = "KiyoshiTheDevil";
 const TWITCH_USER = "kiyoshi_the_devil";
 const REFRESH_MS = 60_000;
 
