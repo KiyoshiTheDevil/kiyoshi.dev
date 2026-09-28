@@ -150,15 +150,66 @@ function resizeSky() {
   // A handful, not a storm: roughly one petal per 60 000 square pixels of window.
   const want = Math.max(8, Math.min(26, Math.round((W * H) / 60000)));
   petals = Array.from({ length: want }, () => newPetal(true));
+  makeStars();
+}
+
+// ── Stars ────────────────────────────────────────────────────────────────────
+// Out at night: fading in from 19:30, all there from 21:30 to 4:30, gone by 6:30. Positions are
+// kept as fractions of the window, so a resize keeps the same sky.
+let stars = [], starLight = 0;
+function makeStars() {
+  const n = Math.max(60, Math.min(240, Math.round((W * H) / 7000)));
+  stars = Array.from({ length: n }, () => {
+    const bright = Math.random() < 0.08;
+    return {
+      x: Math.random(), y: Math.pow(Math.random(), 1.5),   // more of them high up
+      r: bright ? 1.2 + Math.random() * 0.6 : 0.45 + Math.random() * 0.6, bright,
+      phase: Math.random() * Math.PI * 2, speed: 0.4 + Math.random() * 1.4,
+      warm: Math.random() < 0.2,
+    };
+  });
+}
+
+const ease = (x) => x * x * (3 - 2 * x);
+function starsAt(hours) {
+  if (hours >= 21.5 || hours < 4.5) return 1;
+  if (hours >= 19.5) return ease((hours - 19.5) / 2);
+  if (hours < 6.5) return ease(1 - (hours - 4.5) / 2);
+  return 0;
+}
+
+function drawStars(t) {
+  if (starLight < 0.01) return;
+  for (const s of stars) {
+    // Each twinkles on its own beat; lower down, nearer the horizon glow, they are fainter.
+    const twinkle = reduceMotion ? 0.85 : 0.6 + 0.4 * Math.sin(t / 1000 * s.speed + s.phase);
+    const alpha = starLight * twinkle * (1 - s.y * 0.7);
+    const x = s.x * W, y = s.y * H * 0.9;
+    ctx.fillStyle = `rgba(${s.warm ? "255, 236, 214" : "236, 240, 255"}, ${alpha.toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(x, y, s.r, 0, Math.PI * 2); ctx.fill();
+    if (s.bright) {
+      ctx.fillStyle = `rgba(236, 240, 255, ${(alpha * 0.14).toFixed(3)})`;
+      ctx.beginPath(); ctx.arc(x, y, s.r * 4, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
+
+// `?hour=23` shows the sky at another time of day: to look at the night without waiting for it.
+const PREVIEW_HOUR = parseFloat(new URLSearchParams(location.search).get("hour"));
+function skyHours() {
+  if (PREVIEW_HOUR >= 0 && PREVIEW_HOUR < 24) return PREVIEW_HOUR;
+  const { h, m } = localNow();
+  return h + m / 60;
 }
 
 // The gradient is recomputed once a minute; the time of day does not move faster than that.
 let skyGradient = null, skyMinute = -1;
 function gradientNow() {
-  const { h, m } = localNow();
-  const key = h * 60 + m;
+  const hours = skyHours();
+  const key = Math.floor(hours * 60);
   if (!skyGradient || key !== skyMinute) {
-    const [top, bottom] = skyAt(h + m / 60);
+    const [top, bottom] = skyAt(hours);
+    starLight = starsAt(hours);
     skyGradient = ctx.createLinearGradient(0, 0, 0, H);
     skyGradient.addColorStop(0, top);
     skyGradient.addColorStop(1, bottom);
@@ -171,6 +222,7 @@ function drawSky(t) {
   ctx.globalCompositeOperation = "source-over";
   ctx.fillStyle = gradientNow();
   ctx.fillRect(0, 0, W, H);
+  drawStars(t);
   gravity += (gravityTarget - gravity) * 0.015;
   const g = gravity, f = 1 - g;
   for (const p of petals) {
