@@ -203,6 +203,10 @@ a.box:hover::after { opacity: 1; }
 }
 .soon::before { display: none; }   /* keeps its dashes, no gradient edge */
 .soon .project-name { color: var(--text); opacity: .75; }
+/* The logos stand in for the names; quiet like the rest of a compartment that is not out yet. */
+.soon-logo { display: block; align-self: flex-start; width: auto; max-width: 100%; opacity: .8; margin-bottom: 6px; }
+.tsukumo-logo { height: 22px; }
+.remote-logo { height: 30px; }
 
 /* ── Playful text links: letters hop one after another, a kaomoji pops out ── */
 .fun { display: inline-block; }
