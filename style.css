@@ -183,23 +183,24 @@ a.box:hover::after { opacity: 1; }
 .soon .project-name { color: var(--text); opacity: .75; }
 
 /* ── Playful text links: letters hop one after another, a kaomoji pops out ── */
-.fun { position: relative; display: inline-block; }
+.fun { display: inline-block; }
 .fun .ch { display: inline-block; }
 .fun:hover .ch { animation: hop .5s cubic-bezier(.3, 1.6, .5, 1) both; animation-delay: calc(var(--i) * 32ms); }
 @keyframes hop { 0% { transform: translateY(0); } 40% { transform: translateY(-5px); } 100% { transform: translateY(0); } }
 
-/* Beside the link by default; above it where a neighbour sits beside it. */
+/* The kaomoji is not placed at the link but at a fixed, empty spot of its compartment: the link
+   itself is not positioned, so the pseudo-element anchors to the .box around it. Every link of a
+   compartment shows its face in the same place, large enough to read. */
 .fun::after {
   content: attr(data-kao);
-  position: absolute; left: calc(100% + 10px); top: 50%;
-  transform: translateY(-50%) scale(.3) rotate(-25deg);
+  position: absolute; right: 24px; bottom: 22px;
+  transform: scale(.3) rotate(-18deg); transform-origin: 80% 80%;
   opacity: 0; pointer-events: none; white-space: nowrap;
-  font-size: 12.5px; font-weight: 500;
-  transition: transform .38s cubic-bezier(.3, 1.7, .5, 1), opacity .2s ease;
+  font-size: 30px; font-weight: 500; line-height: 1; letter-spacing: -.02em;
+  transition: transform .42s cubic-bezier(.3, 1.7, .5, 1), opacity .2s ease;
 }
-.fun:hover::after { transform: translateY(-50%) scale(1) rotate(0); opacity: 1; }
-.contact .fun::after { left: 50%; top: auto; bottom: calc(100% + 4px); transform: translateX(-50%) scale(.3) rotate(-20deg); color: var(--sakura); }
-.contact .fun:hover::after { transform: translateX(-50%) scale(1) rotate(0); }
+.fun:hover::after { transform: scale(1) rotate(0); opacity: 1; }
+.contact .fun::after { right: 22px; bottom: auto; top: calc(50% - 12px); font-size: 24px; color: var(--sakura); transform-origin: center; }
 
 /* ── Contact ─────────────────────────────────────────────────────────────── */
 .contact { grid-area: contact; display: flex; align-items: center; gap: 22px; font-size: 14px; color: var(--muted); }
@@ -238,9 +239,9 @@ a.box:hover::after { opacity: 1; }
   .tagline { margin-bottom: 10px; }
   .socials { flex-direction: row; flex-wrap: wrap; gap: 4px 14px; }
   .contact { flex-wrap: wrap; gap: 8px 18px; }
-  /* The social links sit in a row here, so their kaomoji go above them too. */
-  .socials .fun::after { left: 50%; top: auto; bottom: calc(100% + 2px); transform: translateX(-50%) scale(.3) rotate(-20deg); }
-  .socials .fun:hover::after { transform: translateX(-50%) scale(1) rotate(0); }
+  /* No free spot is left in the strip or the wrapped contact row, and touch has no hover anyway:
+     the letters still hop, the face stays away. */
+  .fun::after { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -248,5 +249,5 @@ a.box:hover::after { opacity: 1; }
   a.box, a.box:hover, a.box:active { transform: none; }
   .live.is-live .dot { animation: none; }
   .fun:hover .ch { animation: none; }
-  .fun::after { transition: opacity .2s ease; }
+  .fun::after { transition: opacity .2s ease; transform: none; }
 }
