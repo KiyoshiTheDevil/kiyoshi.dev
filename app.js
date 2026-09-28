@@ -568,7 +568,7 @@ for (const a of document.querySelectorAll("a.fun")) {
 
 // ── Suggested streamers ──────────────────────────────────────────────────────
 // A row of cards that slides out of the Twitch compartment while Kiyoshi is offline. The card
-// under the pointer opens up to the right and tells more: live or not, the game, followers, link.
+// under the pointer opens into a small profile: banner, live or not, what was streamed, followers.
 // Everything comes from decapi, like the rest of the compartment. Pictures and follower counts load
 // a moment after the page, so the row is ready before anyone reaches it; live state is asked when
 // someone does, at most every two minutes.
@@ -576,8 +576,9 @@ const FRIENDS = ["LMary52", "GreekGeekGames", "Warfu_"];
 {
   const hand = $("suggest");
   const STEP = 100;    // px from one card to the next
-  const GROW = 150;    // px an opened card gains, to its right
+  const GROW = 178;    // px an opened card gains, to its right
   const compact = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
+  const PEOPLE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2.1.7 3.5 2.8 3.5 5.7"/></svg>';
 
   const cards = FRIENDS.map((name, i) => {
     const a = document.createElement("a");
@@ -585,11 +586,20 @@ const FRIENDS = ["LMary52", "GreekGeekGames", "Warfu_"];
     a.href = `https://twitch.tv/${name.toLowerCase()}`;
     a.target = "_blank"; a.rel = "noopener";
     a.style.setProperty("--i", i);
-    a.innerHTML = `<span class="s-main"><span class="s-av"><span></span></span><span class="s-name"></span></span>
-      <span class="s-info"><span class="s-status">offline</span><span class="s-game"></span><span class="s-follow"></span><span class="s-link"></span></span>`;
-    a.querySelector(".s-av span").textContent = name[0].toUpperCase();
+    a.innerHTML = `<span class="s-face s-closed"><span class="s-av"><span></span></span><span class="s-name"></span></span>
+      <span class="s-face s-profile" aria-hidden="true">
+        <span class="s-banner"></span>
+        <span class="s-body">
+          <span class="s-av"><span></span></span>
+          <span class="s-head"><span class="s-title"></span><span class="s-pill">offline</span></span>
+          <span class="s-game"></span>
+          <span class="s-follow"></span>
+          <span class="s-btn">Visit channel ↗</span>
+        </span>
+      </span>`;
+    for (const el of a.querySelectorAll(".s-av span")) el.textContent = name[0].toUpperCase();
     a.querySelector(".s-name").textContent = name;
-    a.querySelector(".s-link").textContent = `twitch.tv/${name.toLowerCase()}`;
+    a.querySelector(".s-title").textContent = name;
     hand.appendChild(a);
     return { name, a, live: false, game: "", uptime: "" };
   });
@@ -608,8 +618,14 @@ const FRIENDS = ["LMary52", "GreekGeekGames", "Warfu_"];
 
   const describe = (c) => {
     const q = (s) => c.a.querySelector(s);
-    q(".s-status").textContent = c.live ? `● live${c.uptime ? " · " + shortUptime(c.uptime) : ""}` : "offline";
-    q(".s-game").textContent = c.game ? (c.live ? c.game : `last: ${c.game}`) : "";
+    q(".s-pill").textContent = c.live ? `● live${c.uptime ? " · " + shortUptime(c.uptime) : ""}` : "offline";
+    const game = q(".s-game");
+    game.replaceChildren();
+    if (c.game) {
+      const b = document.createElement("b");
+      b.textContent = c.game;
+      game.append(c.live ? "Playing " : "Last streamed ", b);
+    }
     c.a.classList.toggle("is-live", c.live);
     c.a.setAttribute("aria-label", `${c.name}, ${c.live ? "live now" : "offline"}${c.game ? ", " + c.game : ""}`);
   };
@@ -620,10 +636,15 @@ const FRIENDS = ["LMary52", "GreekGeekGames", "Warfu_"];
         if (!/^https:\/\/static-cdn\.jtvnw\.net\//.test(url)) return;
         const img = new Image();
         img.alt = ""; img.decoding = "async"; img.src = url;
-        img.onload = () => c.a.querySelector(".s-av").replaceChildren(img);
+        img.onload = () => {
+          for (const av of c.a.querySelectorAll(".s-av")) av.replaceChildren(img.cloneNode());
+          c.a.querySelector(".s-banner").style.setProperty("--pic", `url("${url}")`);
+        };
       }).catch(() => {});
       getText(`https://decapi.me/twitch/followcount/${c.name}`).then((n) => {
-        if (/^\d+$/.test(n)) c.a.querySelector(".s-follow").textContent = `${compact.format(Number(n))} followers`;
+        if (!/^\d+$/.test(n)) return;
+        c.a.querySelector(".s-follow").innerHTML = PEOPLE;
+        c.a.querySelector(".s-follow").append(`${compact.format(Number(n))} followers`);
       }).catch(() => {});
     }
   }, 1200);
@@ -660,15 +681,20 @@ const FRIENDS = ["LMary52", "GreekGeekGames", "Warfu_"];
   });
   // The opened card stays open while the pointer crosses a gap; it closes with the row.
   const maybeClose = () => setTimeout(() => {
-    if (!hand.matches(":hover") && !$("live").matches(":hover") && !hand.matches(":focus-within")) { open = -1; place(); }
+    if (!hand.matches(":hover") && !$("live").matches(":hover") && !hand.matches(":focus-within")) {
+      hand.classList.remove("is-out");
+      open = -1; place();
+    }
   }, 250);
   hand.addEventListener("pointerleave", maybeClose);
   $("live").addEventListener("pointerleave", maybeClose);
   hand.addEventListener("focusout", maybeClose);
   $("live").addEventListener("pointerenter", () => {
-    // Coming to the compartment from outside the row starts with every card closed again.
-    if (!hand.matches(":hover")) { open = -1; place(); }
+    // Only while Kiyoshi is offline. Coming from outside the row starts with every card closed.
+    if ($("live").classList.contains("is-live")) return;
+    if (!hand.classList.contains("is-out")) { open = -1; place(); }
     fit(); askLive();
+    hand.classList.add("is-out");
   });
   hand.addEventListener("focusin", () => { fit(); askLive(); });
 }

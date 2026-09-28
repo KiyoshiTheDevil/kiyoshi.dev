@@ -177,27 +177,30 @@ a.box:hover::after { opacity: 1; }
 .live { z-index: 1; }
 .s-card {
   position: absolute; left: 50%; bottom: calc(100% + 14px);
-  width: 92px; height: 118px; margin-left: calc(-46px + var(--shift, 0px)); box-sizing: border-box; padding: 12px 0 10px;
-  display: flex; align-items: stretch; overflow: hidden;
-  border-radius: 14px; background: rgba(50, 32, 84, .86); border: 1px solid rgba(190, 150, 255, .45);
+  width: 92px; height: 118px; margin-left: calc(-46px + var(--shift, 0px)); box-sizing: border-box;
+  display: block; overflow: hidden;
+  border-radius: 14px; background: rgba(50, 32, 84, .9); border: 1px solid rgba(190, 150, 255, .45);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   box-shadow: 0 10px 24px -8px rgba(10, 4, 24, .6);
-  color: #e6dcff; font-size: 12px; font-weight: 500; text-decoration: none;
-  /* Closed, all four hide behind the middle of the compartment. */
+  color: #e6dcff; font-size: 13px; font-weight: 500; text-decoration: none;
+  /* Closed, all three hide behind the middle of the compartment. */
   transform: translate(calc(var(--x) * .15), 70px) scale(.7); opacity: 0; pointer-events: none;
-  transition: transform .5s var(--spring), width .45s var(--spring), opacity .2s ease, border-color .2s ease;
+  transition: transform .5s var(--spring), width .45s var(--spring), height .45s var(--spring),
+              opacity .2s ease, border-color .2s ease;
   /* Closing waits a moment, so a pointer that slips out for an instant does not shut the row. */
   transition-delay: calc(150ms + (3 - var(--i)) * 20ms);
 }
 /* While the row is out, the whole band it covers counts as the row, gaps between the cards and the
    strip down to the compartment included: moving from card to card never closes it. */
 .suggest::before {
-  content: ""; position: absolute; bottom: 100%; height: 150px;
-  left: calc(50% - 162px + var(--shift, 0px)); width: 474px;   /* three cards plus one opened */
+  content: ""; position: absolute; bottom: 100%; height: 244px;
+  left: calc(50% - 162px + var(--shift, 0px)); width: 502px;   /* three cards plus one opened */
 }
-.live:not(.is-live):hover ~ .suggest::before, .suggest:hover::before { pointer-events: auto; }
-.live:not(.is-live):hover ~ .suggest .s-card,
-.suggest:hover .s-card,
+/* Open is a class the script sets: it opens when the pointer reaches the compartment and closes only
+   once the pointer has been off both for a moment. Plain :hover would drop the row whenever a fast
+   pointer left the compartment for a spot of the row before the row counted as hovered. */
+.suggest.is-out::before { pointer-events: auto; }
+.suggest.is-out .s-card,
 .suggest:focus-within .s-card {
   transform: translate(var(--x), 0) scale(1); opacity: 1; pointer-events: auto;
   transition-delay: calc(var(--i) * 40ms);
@@ -208,30 +211,58 @@ a.box:hover::after { opacity: 1; }
   transform: translate(var(--x), -6px);
   z-index: 2; transition-delay: 0s; border-color: rgba(215, 190, 255, .85); outline: none;
 }
-/* Opened, a card grows to its right and shows what the picture alone cannot. */
-.s-main {
-  flex: 0 0 90px; box-sizing: border-box; padding: 0 6px; min-width: 0;
+
+/* Two faces in one card. Closed: picture and name. Opened, the card grows right and up (it is
+   anchored at its foot) into a small profile: banner, picture, name and status, what was streamed,
+   followers and a button. The faces cross-fade while the card changes size. */
+.s-face { position: absolute; inset: 0; transition: opacity .2s ease; }
+.s-closed {
+  padding: 12px 6px 10px; box-sizing: border-box;
   display: flex; flex-direction: column; align-items: center; justify-content: space-between;
 }
-.s-info {
-  flex: 0 0 150px; min-width: 0; padding-right: 10px; box-sizing: border-box;
-  display: flex; flex-direction: column; justify-content: center; gap: 3px;
-  font-size: 12px; font-weight: 400; color: #cbbdf0; white-space: nowrap;
-  opacity: 0; transform: translateX(-8px); transition: opacity .2s ease, transform .3s ease;
+.s-profile { opacity: 0; pointer-events: none; width: 270px; height: 216px; }
+.s-card.is-open { width: 270px; height: 216px; }
+.s-card.is-open .s-closed { opacity: 0; }
+.s-card.is-open .s-profile { opacity: 1; transition-delay: .12s; }
+
+.s-banner {
+  position: absolute; left: 0; right: 0; top: 0; height: 60px; overflow: hidden;
+  background: #6b4bb5;
 }
-.s-info > span { overflow: hidden; text-overflow: ellipsis; }
-.s-info > span:empty { display: none; }
-.s-status { font-weight: 700; color: #e6dcff; }
-.s-card.is-live .s-status { color: #ff8a95; }
-.s-link { color: #b894ff; }
-.s-card.is-open { width: 242px; }
-.s-card.is-open .s-info { opacity: 1; transform: none; transition-delay: .1s; }
+/* No banner comes with the channel, so the picture makes one: enlarged, blurred, then faded into
+   the card at its lower edge. */
+.s-banner::before {
+  content: ""; position: absolute; inset: -24px;
+  background: var(--pic, none) center / cover; filter: blur(16px) saturate(1.4); opacity: .85;
+}
+.s-banner::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 30%, rgba(50, 32, 84, .9)); }
+.s-body { position: absolute; left: 14px; right: 14px; top: 30px; bottom: 14px; display: flex; flex-direction: column; }
+.s-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.s-title { font-size: 16px; font-weight: 700; color: #fff; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.s-pill {
+  flex-shrink: 0; font-size: 12px; font-weight: 500; padding: 2px 9px; border-radius: 99px;
+  background: rgba(255, 255, 255, .1); color: #cfc2ee; white-space: nowrap;
+}
+.s-card.is-live .s-pill { background: rgba(255, 90, 106, .22); color: #ffb3bb; }
+.s-game, .s-follow { font-size: 13.5px; font-weight: 400; color: #a99bc9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
+.s-game b { font-weight: 500; color: #e6dcff; }
+.s-game:empty { display: none; }
+.s-follow svg { width: 15px; height: 15px; vertical-align: -2px; margin-right: 4px; fill: none; stroke: #b894ff; stroke-width: 2; }
+.s-btn {
+  margin-top: auto; padding: 7px 0; border-radius: 9px; text-align: center;
+  background: #9146ff; color: #fff; font-size: 13.5px; font-weight: 700;
+  transition: background-color .15s ease;
+}
+.s-card:hover .s-btn { background: #a066ff; }
+
 .s-av { position: relative; width: 58px; height: 58px; border-radius: 50%; padding: 2px; background: #9146ff; flex-shrink: 0; }
+.s-profile .s-av { width: 56px; height: 56px; border: 3px solid rgba(50, 32, 84, 1); }
 .s-av img, .s-av span { width: 100%; height: 100%; border-radius: 50%; display: block; object-fit: cover; }
 .s-av span { background: #2a2238; color: #d9c8ff; font-size: 21px; line-height: 54px; text-align: center; }
+.s-profile .s-av span { line-height: 50px; font-size: 20px; }
 .s-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .s-card.is-live .s-av { background: #ff5a6a; }
-.s-card.is-live .s-av::after {
+.s-card.is-live .s-closed .s-av::after {
   content: ""; position: absolute; right: 0; bottom: 2px; width: 13px; height: 13px; border-radius: 50%;
   background: #ff5a6a; border: 2px solid rgba(50, 32, 84, 1);
 }
