@@ -21,20 +21,28 @@ async function getText(url) {
 }
 
 // ── Now listening ────────────────────────────────────────────────────────────
-// playing-now first; when nothing is playing, the last listen, labelled as such.
+// Only what is playing right now. When nothing is, the compartment says so, with a kaomoji in
+// place of the cover, the same family the Kodama share page uses for its empty links.
+const SILENCE = ["(－_－)", "(ᴗ_ᴗ)", "(・_・)", "(￣～￣)", "(ーー;)", "(-_-) zzZ"];
+
+function showSilence() {
+  $("lb-state").hidden = true;
+  $("lb-track").textContent = "Currently silence";
+  $("lb-artist").textContent = "";
+  $("lb-cover").style.backgroundImage = "";
+  $("lb-cover").classList.add("is-silent");
+  $("listening").href = "https://kodama.kiyoshi.dev/";
+}
+
 async function updateListening() {
   if (!LISTENBRAINZ_USER) return;
   const base = `https://api.listenbrainz.org/1/user/${encodeURIComponent(LISTENBRAINZ_USER)}`;
   try {
-    let label = "Now listening";
-    let listen = (await getJson(`${base}/playing-now`))?.payload?.listens?.[0];
-    if (!listen) {
-      label = "Last listened";
-      listen = (await getJson(`${base}/listens?count=1`))?.payload?.listens?.[0];
-    }
+    const listen = (await getJson(`${base}/playing-now`))?.payload?.listens?.[0];
     const meta = listen?.track_metadata;
-    if (!meta) return;
-    $("lb-state").textContent = label;
+    if (!meta) { showSilence(); return; }
+    $("lb-state").hidden = false;
+    $("lb-cover").classList.remove("is-silent");
     $("lb-track").textContent = meta.track_name || "";
     $("lb-artist").textContent = meta.artist_name || "";
     const origin = meta.additional_info?.origin_url;
@@ -62,6 +70,9 @@ async function updateLive() {
     }
   } catch { /* keep what is shown */ }
 }
+
+// A different face each visit, like the share page.
+$("lb-kao").textContent = SILENCE[Math.floor(Math.random() * SILENCE.length)];
 
 function refresh() {
   if (document.hidden) return;

@@ -32,10 +32,10 @@
 
     <!-- Live: what is playing right now, from ListenBrainz -->
     <a class="box listening" id="listening" href="https://kodama.kiyoshi.dev/" target="_blank" rel="noopener">
-      <div class="cover" id="lb-cover" aria-hidden="true"></div>
+      <div class="cover is-silent" id="lb-cover" aria-hidden="true"><span class="kao" id="lb-kao">(－_－)</span></div>
       <div class="listening-body">
-        <span class="kicker" id="lb-state">Listening with Kodama</span>
-        <span class="track" id="lb-track">Music software that feels good</span>
+        <span class="kicker" id="lb-state" hidden>Now listening</span>
+        <span class="track" id="lb-track">Currently silence</span>
         <span class="artist" id="lb-artist"></span>
       </div>
     </a>
