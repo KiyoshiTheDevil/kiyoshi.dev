@@ -234,15 +234,12 @@ a.box:hover::after { opacity: 1; }
 .float-ico { color: var(--sakura); display: inline-block; transition: transform .6s var(--spring); }
 .float-btn[aria-pressed="true"] .float-ico { transform: rotate(180deg) scale(1.2); }
 
-/* While floating, each compartment carries its own offset and turn. The hover lift and tilt of the
-   link compartments stay, applied inside the drift. */
+/* While floating, each compartment carries its own offset and turn, and nothing else: the hover lift,
+   zoom and tilt would make it look bigger than the shape the physics bounces, and it would seem to
+   sink into its neighbours. */
 html.floating { overflow: hidden; }
 .floating .bento { touch-action: none; user-select: none; -webkit-user-select: none; }
-.floating .box { transform: translate(var(--fx, 0px), var(--fy, 0px)) rotate(var(--fr, 0deg)); cursor: grab; }
-.floating a.box {
-  transform: translate(var(--fx, 0px), var(--fy, 0px)) rotate(var(--fr, 0deg))
-             perspective(900px) translateY(var(--lift)) scale(var(--sc)) rotateX(var(--rx)) rotateY(var(--ry));
-}
+.floating .box, .floating a.box { transform: translate(var(--fx, 0px), var(--fy, 0px)) rotate(var(--fr, 0deg)); cursor: grab; }
 .floating .box.grabbed { cursor: grabbing; z-index: 5; }
 .floating img { -webkit-user-drag: none; }
 /* Back into the grid: one springy flight home. */

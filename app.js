@@ -247,34 +247,55 @@ for (const a of document.querySelectorAll("a.fun")) {
 }
 
 // ── Zero gravity ─────────────────────────────────────────────────────────────
-// A toy: the compartments drift apart, bump into each other and the window edges, and the pointer
-// shoves them (or grabs and throws one). Positions live in viewport pixels; what is written to the
-// page is only the offset from where the grid would put each compartment, so the grid stays the
-// single source of layout and tidying up is just the offset springing back to zero.
+// A toy: the compartments drift apart and bump into each other and the window edges. They move
+// only when grabbed: drag one and let go to throw it. Each compartment is a turning rectangle: collisions test
+// its real corners, and a knock off-centre sets it spinning. What is written to the page is only
+// the offset from where the grid would put it, so tidying up is the offset springing back to zero.
 {
   const btn = $("float-btn"), label = $("float-label"), bento = document.querySelector(".bento");
   const boxes = [...bento.children].filter(el => el.classList.contains("box"));
   const root = document.documentElement;
+  const RAD = Math.PI / 180;
+  const BOUNCE = .55;      // how much speed survives a knock
+  const MAX_SPEED = 16;    // px per frame
+  const MAX_SPIN = 3;      // degrees per frame
+  const HELD_SPEED = 45;   // px per frame a held compartment can follow the hand
   let bodies = [], on = false, raf = 0, last = 0, settleTimer = 0, grab = null;
-  const ptr = { x: -1e4, y: -1e4, lx: -1e4, ly: -1e4, vx: 0, vy: 0, inside: false };
+  const ptr = { x: 0, y: 0 };
 
   // Where the grid puts a compartment. offsetLeft/Top ignore transforms, so this holds mid-flight.
   const home = (el) => { const r = bento.getBoundingClientRect(); return { x: r.left + el.offsetLeft, y: r.top + el.offsetTop }; };
+  const cross = (ax, ay, bx, by) => ax * by - ay * bx;
+  const axes = (b) => { const c = Math.cos(b.a * RAD), s = Math.sin(b.a * RAD); return [[c, s], [-s, c]]; };
+  const corners = (b) => {
+    const c = Math.cos(b.a * RAD), s = Math.sin(b.a * RAD), hw = b.w / 2, hh = b.h / 2;
+    return [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(([px, py]) => [b.cx + px * c - py * s, b.cy + px * s + py * c]);
+  };
+  // Half the width of a turned rectangle, seen along one direction.
+  const reach = (b, ux, uy) => { const [[ax, ay], [bx, by]] = axes(b); return b.w / 2 * Math.abs(ax * ux + ay * uy) + b.h / 2 * Math.abs(bx * ux + by * uy); };
+  // The speed of one point of a compartment, spin included.
+  const pointVel = (b, rx, ry) => { const w = b.va * RAD; return [b.vx - w * ry, b.vy + w * rx]; };
+  const push = (b, jx, jy, rx, ry) => { b.vx += jx * b.im; b.vy += jy * b.im; b.va += cross(rx, ry, jx, jy) * b.iI / RAD; };
+  // How hard a point is to move along a direction: light, or far from the centre, moves easily.
+  const give = (b, rx, ry, nx, ny) => b.im + cross(rx, ry, nx, ny) ** 2 * b.iI;
 
   function start() {
     clearTimeout(settleTimer);
     root.classList.remove("settling");
     root.classList.add("floating");
-    const br = bento.getBoundingClientRect(), cx = br.left + br.width / 2, cy = br.top + br.height / 2;
+    const br = bento.getBoundingClientRect(), mx = br.left + br.width / 2, my = br.top + br.height / 2;
     bodies = boxes.map(el => {
       const h = home(el), w = el.offsetWidth, ht = el.offsetHeight;
+      const cx = h.x + w / 2, cy = h.y + ht / 2;
       // Outward from the middle of the box, plus a little chance.
-      const dx = h.x + w / 2 - cx, dy = h.y + ht / 2 - cy, d = Math.hypot(dx, dy) || 1;
-      const sp = 1.2 + Math.random() * 1.4;
+      const dx = cx - mx, dy = cy - my, d = Math.hypot(dx, dy) || 1;
+      const sp = .9 + Math.random() * 1.1, m = (w * ht) / 20000;
       return {
-        el, w, h: ht, x: h.x, y: h.y, a: 0,
-        vx: dx / d * sp + (Math.random() - .5), vy: dy / d * sp + (Math.random() - .5),
-        va: (Math.random() - .5) * .5, m: (w * ht) / 20000,
+        el, w, h: ht, cx, cy, a: 0, m, I: m * (w * w + ht * ht) / 12,
+        vx: dx / d * sp + (Math.random() - .5) * .8, vy: dy / d * sp + (Math.random() - .5) * .8,
+        va: (Math.random() - .5) * .4,
+        // A compartment the window does not show at the start (a long page on a phone) drifts in.
+        entering: h.y < 0 || h.x < 0 || h.y + ht > window.innerHeight || h.x + w > window.innerWidth,
       };
     });
     last = performance.now();
@@ -297,68 +318,111 @@ for (const a of document.querySelectorAll("a.fun")) {
     }, 1000);
   }
 
+  function collide(a, c) {
+    // Too far apart to touch, whatever their turn.
+    if (Math.hypot(c.cx - a.cx, c.cy - a.cy) > (Math.hypot(a.w, a.h) + Math.hypot(c.w, c.h)) / 2) return;
+    // Separating axes: two rectangles overlap only if they overlap along all four edge directions.
+    // The direction with the least overlap is the way out.
+    let depth = Infinity, nx = 0, ny = 0;
+    for (const [ux, uy] of [...axes(a), ...axes(c)]) {
+      const d = (c.cx - a.cx) * ux + (c.cy - a.cy) * uy;
+      const o = reach(a, ux, uy) + reach(c, ux, uy) - Math.abs(d);
+      if (o <= 0) return;
+      if (o < depth) { depth = o; const s = d < 0 ? -1 : 1; nx = ux * s; ny = uy * s; }
+    }
+    // Only for the separation: a compartment held against an edge counts as fixed, or the edge would
+    // push it straight back into its neighbour and a pile against a wall would never come apart.
+    const sa = a.pin && !c.pin ? 0 : a.im, sc = c.pin && !a.pin ? 0 : c.im, total = sa + sc;
+    // Where they touch: between the deepest corner of each.
+    const dot = ([x, y]) => x * nx + y * ny;
+    const pa = corners(a).reduce((p, q) => dot(q) > dot(p) ? q : p);
+    const pc = corners(c).reduce((p, q) => dot(q) < dot(p) ? q : p);
+    const px = (pa[0] + pc[0]) / 2, py = (pa[1] + pc[1]) / 2;
+    a.cx -= nx * depth * sa / total; a.cy -= ny * depth * sa / total;
+    c.cx += nx * depth * sc / total; c.cy += ny * depth * sc / total;
+    const rax = px - a.cx, ray = py - a.cy, rcx = px - c.cx, rcy = py - c.cy;
+    const [vax, vay] = pointVel(a, rax, ray), [vcx, vcy] = pointVel(c, rcx, rcy);
+    const vn = (vcx - vax) * nx + (vcy - vay) * ny;
+    if (vn >= 0) return;
+    const j = -(1 + BOUNCE) * vn / (give(a, rax, ray, nx, ny) + give(c, rcx, rcy, nx, ny));
+    push(a, -j * nx, -j * ny, rax, ray);
+    push(c, j * nx, j * ny, rcx, rcy);
+  }
+
+  // Window edges, tested at the corners: the deepest corner past an edge takes the knock.
+  const WALLS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  function walls(b, W, H, dt) {
+    const M = 8;
+    for (const [nx, ny] of WALLS) {
+      let deepest = null, pen = 0;
+      for (const p of corners(b)) {
+        const d = nx === 1 ? M - p[0] : nx === -1 ? p[0] - (W - M) : ny === 1 ? M - p[1] : p[1] - (H - M);
+        if (d > pen) { pen = d; deepest = p; }
+      }
+      if (!deepest) continue;
+      const fix = b.entering ? pen * .08 * dt : pen;
+      b.cx += nx * fix; b.cy += ny * fix;
+      if (!b.entering) b.pin = true;
+      const rx = deepest[0] - b.cx, ry = deepest[1] - b.cy;
+      const [vx, vy] = pointVel(b, rx, ry);
+      const vn = vx * nx + vy * ny;
+      if (vn < 0) {
+        const j = -(1 + BOUNCE) * vn / give(b, rx, ry, nx, ny);
+        push(b, j * nx, j * ny, rx, ry);
+      }
+    }
+  }
+
+  // One stretch of time, dt in frames.
+  function simulate(dt, W, H) {
+    for (const b of bodies) {
+      b.im = 1 / b.m; b.iI = 1 / b.I; b.pin = false;
+      // A held compartment follows the hand on a stiff spring, but stays a body like the others:
+      // pressed against one that is stuck at an edge it stops there instead of passing through.
+      if (grab && grab.b === b) {
+        b.vx = (ptr.x - grab.ox - b.cx) * .6; b.vy = (ptr.y - grab.oy - b.cy) * .6;
+        const s = Math.hypot(b.vx, b.vy);
+        if (s > HELD_SPEED) { b.vx *= HELD_SPEED / s; b.vy *= HELD_SPEED / s; }
+        b.va *= Math.pow(.85, dt);
+        b.cx += b.vx * dt; b.cy += b.vy * dt; b.a += b.va * dt;
+        continue;
+      }
+      // Space has a little air: speed fades slowly, but never to a standstill.
+      b.vx *= Math.pow(.993, dt); b.vy *= Math.pow(.993, dt); b.va *= Math.pow(.985, dt);
+      const s = Math.hypot(b.vx, b.vy);
+      if (s > MAX_SPEED) { b.vx *= MAX_SPEED / s; b.vy *= MAX_SPEED / s; }
+      if (s < .12) { b.vx += (Math.random() - .5) * .05 * dt; b.vy += (Math.random() - .5) * .05 * dt; }
+      b.va = Math.max(-MAX_SPIN, Math.min(MAX_SPIN, b.va));
+      b.cx += b.vx * dt; b.cy += b.vy * dt; b.a += b.va * dt;
+    }
+
+    // Several passes: a compartment squeezed between an edge and another needs a few rounds of
+    // being pushed back and forth before both sit apart. Edges first, so each pass knows who is held.
+    for (let pass = 0; pass < 5; pass++) {
+      for (const b of bodies) walls(b, W, H, dt);
+      for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) collide(bodies[i], bodies[j]);
+    }
+    for (const b of bodies) {
+      walls(b, W, H, dt);
+      if (b.entering && corners(b).every(([x, y]) => x >= 0 && y >= 0 && x <= W && y <= H)) b.entering = false;
+    }
+  }
+
   function step(now) {
     // A frame's timestamp can lie before the click that started the flight. A negative or zero step
     // would turn the edge springs inside out and fling everything away, so such a frame is skipped.
     const dt = Math.min(3, (now - last) / 16.67);
     if (!(dt > 0)) { raf = requestAnimationFrame(step); return; }
     last = now;
-    const W = window.innerWidth, H = window.innerHeight, M = 8;
-    ptr.vx = (ptr.x - ptr.lx) / dt; ptr.vy = (ptr.y - ptr.ly) / dt; ptr.lx = ptr.x; ptr.ly = ptr.y;
-
-    for (const b of bodies) {
-      if (grab && grab.b === b) {
-        const nx = ptr.x - grab.ox, ny = ptr.y - grab.oy;
-        b.vx = (nx - b.x) / dt; b.vy = (ny - b.y) / dt; b.x = nx; b.y = ny;
-        b.va *= .9; b.a += b.va * dt;
-        continue;
-      }
-      // A shove: the pointer moving across a compartment hands it some of its speed and a turn.
-      if (ptr.inside && !grab && ptr.x > b.x && ptr.x < b.x + b.w && ptr.y > b.y && ptr.y < b.y + b.h) {
-        const k = .45 / Math.sqrt(b.m);
-        b.vx += ptr.vx * k * .5; b.vy += ptr.vy * k * .5;
-        const rx = ptr.x - (b.x + b.w / 2), ry = ptr.y - (b.y + b.h / 2);
-        b.va += (rx * ptr.vy - ry * ptr.vx) / (b.w * b.h) * 6 * k;
-      }
-      // Space has a little air: speed fades slowly, but never to a standstill.
-      b.vx *= Math.pow(.992, dt); b.vy *= Math.pow(.992, dt); b.va *= Math.pow(.985, dt);
-      const s = Math.hypot(b.vx, b.vy);
-      if (s > 28) { b.vx *= 28 / s; b.vy *= 28 / s; }
-      if (s < .15) { b.vx += (Math.random() - .5) * .06; b.vy += (Math.random() - .5) * .06; }
-      b.va = Math.max(-6, Math.min(6, b.va));
-      b.x += b.vx * dt; b.y += b.vy * dt; b.a += b.va * dt;
-
-      // Window edges: bounce when hitting one from inside, drift back in when starting outside.
-      if (b.x < M) { if (b.vx < 0) b.vx = -b.vx * .75; b.x += (M - b.x) * .08 * dt; }
-      if (b.x + b.w > W - M) { if (b.vx > 0) b.vx = -b.vx * .75; b.x -= (b.x + b.w - (W - M)) * .08 * dt; }
-      if (b.y < M) { if (b.vy < 0) b.vy = -b.vy * .75; b.y += (M - b.y) * .08 * dt; }
-      if (b.y + b.h > H - M) { if (b.vy > 0) b.vy = -b.vy * .75; b.y -= (b.y + b.h - (H - M)) * .08 * dt; }
-    }
-
-    // Compartments bump into each other: rectangles, the turn ignored, heavier ones push harder.
-    for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
-      const a = bodies[i], c = bodies[j];
-      const ox = Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x);
-      const oy = Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y);
-      if (ox <= 0 || oy <= 0) continue;
-      const ia = grab && grab.b === a ? 0 : 1 / a.m, ic = grab && grab.b === c ? 0 : 1 / c.m;
-      if (ia + ic === 0) continue;
-      const alongX = ox < oy;
-      const n = alongX ? (a.x + a.w / 2 < c.x + c.w / 2 ? 1 : -1) : (a.y + a.h / 2 < c.y + c.h / 2 ? 1 : -1);
-      const pen = (alongX ? ox : oy) / (ia + ic);
-      const rv = alongX ? (c.vx - a.vx) * n : (c.vy - a.vy) * n;
-      if (alongX) { a.x -= n * pen * ia; c.x += n * pen * ic; } else { a.y -= n * pen * ia; c.y += n * pen * ic; }
-      if (rv < 0) {
-        const jn = -1.8 * rv / (ia + ic);
-        if (alongX) { a.vx -= jn * ia * n; c.vx += jn * ic * n; } else { a.vy -= jn * ia * n; c.vy += jn * ic * n; }
-        a.va += (Math.random() - .5) * jn * ia * .3; c.va += (Math.random() - .5) * jn * ic * .3;
-      }
-    }
+    const W = window.innerWidth, H = window.innerHeight;
+    // Three small steps per frame: a fast throw would otherwise sink deep into a neighbour between
+    // two frames, deeper than the passes can pull apart.
+    for (let i = 0; i < 3; i++) simulate(dt / 3, W, H);
 
     for (const b of bodies) {
       const h = home(b.el);
-      b.el.style.setProperty("--fx", `${(b.x - h.x).toFixed(1)}px`);
-      b.el.style.setProperty("--fy", `${(b.y - h.y).toFixed(1)}px`);
+      b.el.style.setProperty("--fx", `${(b.cx - b.w / 2 - h.x).toFixed(1)}px`);
+      b.el.style.setProperty("--fy", `${(b.cy - b.h / 2 - h.y).toFixed(1)}px`);
       b.el.style.setProperty("--fr", `${b.a.toFixed(2)}deg`);
     }
     raf = requestAnimationFrame(step);
@@ -372,19 +436,18 @@ for (const a of document.querySelectorAll("a.fun")) {
   });
 
   window.addEventListener("pointermove", (e) => {
-    if (!ptr.inside) { ptr.lx = e.clientX; ptr.ly = e.clientY; }
-    ptr.x = e.clientX; ptr.y = e.clientY; ptr.inside = true;
-    if (grab && Math.hypot(e.clientX - grab.sx, e.clientY - grab.sy) > 4) grab.moved = true;
+    if (!grab) return;
+    ptr.x = e.clientX; ptr.y = e.clientY;
+    if (Math.hypot(e.clientX - grab.sx, e.clientY - grab.sy) > 4) grab.moved = true;
   });
-  document.documentElement.addEventListener("pointerleave", () => { ptr.inside = false; });
 
   // Grab and throw. A drag that moved is not a click, so the link underneath does not open.
   bento.addEventListener("pointerdown", (e) => {
     if (!on || e.button !== 0) return;
     const b = bodies.find(b => b.el.contains(e.target));
     if (!b) return;
-    ptr.x = ptr.lx = e.clientX; ptr.y = ptr.ly = e.clientY; ptr.inside = true;
-    grab = { b, ox: e.clientX - b.x, oy: e.clientY - b.y, sx: e.clientX, sy: e.clientY, moved: false };
+    ptr.x = e.clientX; ptr.y = e.clientY;
+    grab = { b, ox: e.clientX - b.cx, oy: e.clientY - b.cy, sx: e.clientX, sy: e.clientY, moved: false };
     b.el.classList.add("grabbed");
   });
   const release = () => {
