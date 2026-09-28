@@ -177,15 +177,15 @@ a.box:hover::after { opacity: 1; }
 .live { z-index: 1; }
 .s-card {
   position: absolute; left: 50%; bottom: calc(100% + 14px);
-  width: 92px; height: 118px; margin-left: calc(-46px + var(--shift, 0px)); box-sizing: border-box; padding: 12px 7px 10px;
-  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  width: 92px; height: 118px; margin-left: calc(-46px + var(--shift, 0px)); box-sizing: border-box; padding: 12px 0 10px;
+  display: flex; align-items: stretch; overflow: hidden;
   border-radius: 14px; background: rgba(50, 32, 84, .86); border: 1px solid rgba(190, 150, 255, .45);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   box-shadow: 0 10px 24px -8px rgba(10, 4, 24, .6);
   color: #e6dcff; font-size: 12px; font-weight: 500; text-decoration: none;
   /* Closed, all four hide behind the middle of the compartment. */
   transform: translate(calc(var(--x) * .15), 70px) scale(.7); opacity: 0; pointer-events: none;
-  transition: transform .5s var(--spring), opacity .2s ease, border-color .2s ease;
+  transition: transform .5s var(--spring), width .45s var(--spring), opacity .2s ease, border-color .2s ease;
   /* Closing waits a moment, so a pointer that slips out for an instant does not shut the row. */
   transition-delay: calc(150ms + (3 - var(--i)) * 20ms);
 }
@@ -193,7 +193,7 @@ a.box:hover::after { opacity: 1; }
    strip down to the compartment included: moving from card to card never closes it. */
 .suggest::before {
   content: ""; position: absolute; bottom: 100%; height: 150px;
-  left: calc(50% - 212px + var(--shift, 0px)); width: 424px;
+  left: calc(50% - 162px + var(--shift, 0px)); width: 474px;   /* three cards plus one opened */
 }
 .live:not(.is-live):hover ~ .suggest::before, .suggest:hover::before { pointer-events: auto; }
 .live:not(.is-live):hover ~ .suggest .s-card,
@@ -202,18 +202,34 @@ a.box:hover::after { opacity: 1; }
   transform: translate(var(--x), 0) scale(1); opacity: 1; pointer-events: auto;
   transition-delay: calc(var(--i) * 40ms);
 }
-/* The card under the pointer rises a little. Straight up only: a card that turned or slid sideways
-   would move out from under the pointer and flicker. */
+/* The card under the pointer rises a little, straight up: a card that turned or slid sideways would
+   move out from under the pointer and flicker. */
 .suggest .s-card:hover, .suggest .s-card:focus-visible {
-  transform: translate(var(--x), -8px) scale(1.05);
+  transform: translate(var(--x), -6px);
   z-index: 2; transition-delay: 0s; border-color: rgba(215, 190, 255, .85); outline: none;
 }
+/* Opened, a card grows to its right and shows what the picture alone cannot. */
+.s-main {
+  flex: 0 0 90px; box-sizing: border-box; padding: 0 6px; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+}
+.s-info {
+  flex: 0 0 150px; min-width: 0; padding-right: 10px; box-sizing: border-box;
+  display: flex; flex-direction: column; justify-content: center; gap: 3px;
+  font-size: 12px; font-weight: 400; color: #cbbdf0; white-space: nowrap;
+  opacity: 0; transform: translateX(-8px); transition: opacity .2s ease, transform .3s ease;
+}
+.s-info > span { overflow: hidden; text-overflow: ellipsis; }
+.s-info > span:empty { display: none; }
+.s-status { font-weight: 700; color: #e6dcff; }
+.s-card.is-live .s-status { color: #ff8a95; }
+.s-link { color: #b894ff; }
+.s-card.is-open { width: 242px; }
+.s-card.is-open .s-info { opacity: 1; transform: none; transition-delay: .1s; }
 .s-av { position: relative; width: 58px; height: 58px; border-radius: 50%; padding: 2px; background: #9146ff; flex-shrink: 0; }
 .s-av img, .s-av span { width: 100%; height: 100%; border-radius: 50%; display: block; object-fit: cover; }
 .s-av span { background: #2a2238; color: #d9c8ff; font-size: 21px; line-height: 54px; text-align: center; }
 .s-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The card drawn out of the hand shows its whole name, even when that is wider than the card. */
-.s-card:hover .s-name, .s-card:focus-visible .s-name { max-width: none; overflow: visible; }
 .s-card.is-live .s-av { background: #ff5a6a; }
 .s-card.is-live .s-av::after {
   content: ""; position: absolute; right: 0; bottom: 2px; width: 13px; height: 13px; border-radius: 50%;

@@ -567,26 +567,52 @@ for (const a of document.querySelectorAll("a.fun")) {
 }
 
 // ── Suggested streamers ──────────────────────────────────────────────────────
-// A row of cards that slides out of the Twitch compartment while Kiyoshi is offline. Pictures and
-// live state come from decapi, like the rest of the compartment. Pictures load a moment after the
-// page, so the hand is ready before anyone reaches it; live state is asked when someone does.
-const FRIENDS = ["LMary52", "GreekGeekGames", "niwwu", "Warfu_"];
+// A row of cards that slides out of the Twitch compartment while Kiyoshi is offline. The card
+// under the pointer opens up to the right and tells more: live or not, the game, followers, link.
+// Everything comes from decapi, like the rest of the compartment. Pictures and follower counts load
+// a moment after the page, so the row is ready before anyone reaches it; live state is asked when
+// someone does, at most every two minutes.
+const FRIENDS = ["LMary52", "GreekGeekGames", "Warfu_"];
 {
   const hand = $("suggest");
-  const STEP = 100;   // px from one card to the next
+  const STEP = 100;    // px from one card to the next
+  const GROW = 150;    // px an opened card gains, to its right
+  const compact = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
+
   const cards = FRIENDS.map((name, i) => {
     const a = document.createElement("a");
     a.className = "s-card";
     a.href = `https://twitch.tv/${name.toLowerCase()}`;
     a.target = "_blank"; a.rel = "noopener";
-    a.title = name;
     a.style.setProperty("--i", i);
-    a.style.setProperty("--x", `${(i - (FRIENDS.length - 1) / 2) * STEP}px`);
-    a.innerHTML = `<span class="s-av"><span>${name[0].toUpperCase()}</span></span><span class="s-name"></span>`;
+    a.innerHTML = `<span class="s-main"><span class="s-av"><span></span></span><span class="s-name"></span></span>
+      <span class="s-info"><span class="s-status">offline</span><span class="s-game"></span><span class="s-follow"></span><span class="s-link"></span></span>`;
+    a.querySelector(".s-av span").textContent = name[0].toUpperCase();
     a.querySelector(".s-name").textContent = name;
+    a.querySelector(".s-link").textContent = `twitch.tv/${name.toLowerCase()}`;
     hand.appendChild(a);
-    return { name, a };
+    return { name, a, live: false, game: "", uptime: "" };
   });
+
+  // Positions: the opened card keeps its left edge, so it grows away from the pointer instead of
+  // sliding out from under it; the cards to its right make room.
+  let open = -1;
+  const place = () => {
+    cards.forEach((c, i) => {
+      const x = (i - (cards.length - 1) / 2) * STEP + (open >= 0 && i > open ? GROW : 0);
+      c.a.style.setProperty("--x", `${x}px`);
+      c.a.classList.toggle("is-open", i === open);
+    });
+  };
+  place();
+
+  const describe = (c) => {
+    const q = (s) => c.a.querySelector(s);
+    q(".s-status").textContent = c.live ? `● live${c.uptime ? " · " + shortUptime(c.uptime) : ""}` : "offline";
+    q(".s-game").textContent = c.game ? (c.live ? c.game : `last: ${c.game}`) : "";
+    c.a.classList.toggle("is-live", c.live);
+    c.a.setAttribute("aria-label", `${c.name}, ${c.live ? "live now" : "offline"}${c.game ? ", " + c.game : ""}`);
+  };
 
   setTimeout(() => {
     for (const c of cards) {
@@ -596,6 +622,9 @@ const FRIENDS = ["LMary52", "GreekGeekGames", "niwwu", "Warfu_"];
         img.alt = ""; img.decoding = "async"; img.src = url;
         img.onload = () => c.a.querySelector(".s-av").replaceChildren(img);
       }).catch(() => {});
+      getText(`https://decapi.me/twitch/followcount/${c.name}`).then((n) => {
+        if (/^\d+$/.test(n)) c.a.querySelector(".s-follow").textContent = `${compact.format(Number(n))} followers`;
+      }).catch(() => {});
     }
   }, 1200);
 
@@ -604,24 +633,44 @@ const FRIENDS = ["LMary52", "GreekGeekGames", "niwwu", "Warfu_"];
     if (Date.now() - asked < 120_000) return;
     asked = Date.now();
     for (const c of cards) {
-      getText(`https://decapi.me/twitch/uptime/${c.name}`).then((t) => {
-        const live = !/offline/i.test(t) && !/error|not found/i.test(t);
-        c.a.classList.toggle("is-live", live);
-        c.a.title = live ? `${c.name} is live` : c.name;
+      Promise.all([
+        getText(`https://decapi.me/twitch/uptime/${c.name}`),
+        getText(`https://decapi.me/twitch/game/${c.name}`).catch(() => ""),
+      ]).then(([t, game]) => {
+        c.live = !/offline/i.test(t) && !/error|not found/i.test(t);
+        c.uptime = c.live ? t : "";
+        c.game = /error|not found|deprecated/i.test(game) ? "" : game;
+        describe(c);
       }).catch(() => {});
     }
   };
+
   // The Twitch compartment sits at the right edge of the box. In a narrow window the row would
-  // reach past the window, so it slides left just far enough to stay whole.
-  const HALF_HAND = 1.5 * STEP + 46 + 4;   // middle of the row to the far edge of the outer card, plus its hover growth
+  // reach past the window, so it slides left just far enough to stay whole, opened card included.
+  const REACH_RIGHT = (FRIENDS.length - 1) / 2 * STEP + 46 + GROW + 4;
   const fit = () => {
     const r = $("live").getBoundingClientRect(), mid = r.left + r.width / 2;
-    const over = mid + HALF_HAND - (document.documentElement.clientWidth - 12);
+    const over = mid + REACH_RIGHT - (document.documentElement.clientWidth - 12);
     hand.style.setProperty("--shift", `${Math.round(-Math.max(0, over))}px`);
   };
-  $("live").addEventListener("pointerenter", () => { fit(); askLive(); });
-  hand.addEventListener("focusin", fit);
-  hand.addEventListener("focusin", askLive);
+
+  cards.forEach((c, i) => {
+    c.a.addEventListener("pointerenter", () => { open = i; place(); });
+    c.a.addEventListener("focus", () => { open = i; place(); });
+  });
+  // The opened card stays open while the pointer crosses a gap; it closes with the row.
+  const maybeClose = () => setTimeout(() => {
+    if (!hand.matches(":hover") && !$("live").matches(":hover") && !hand.matches(":focus-within")) { open = -1; place(); }
+  }, 250);
+  hand.addEventListener("pointerleave", maybeClose);
+  $("live").addEventListener("pointerleave", maybeClose);
+  hand.addEventListener("focusout", maybeClose);
+  $("live").addEventListener("pointerenter", () => {
+    // Coming to the compartment from outside the row starts with every card closed again.
+    if (!hand.matches(":hover")) { open = -1; place(); }
+    fit(); askLive();
+  });
+  hand.addEventListener("focusin", () => { fit(); askLive(); });
 }
 
 // A different face each visit, like the share page.
