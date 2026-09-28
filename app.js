@@ -125,13 +125,20 @@ const sky = $("sky");
 const ctx = sky.getContext("2d");
 let W = 0, H = 0, petals = [];
 
+// Gravity for the petals: 1 falls, 0 floats. Zero gravity sets the target; the sky eases toward it,
+// so petals slow down and drift off rather than stopping dead.
+let gravity = 1, gravityTarget = 1;
+
 function newPetal(anywhere) {
+  const drift = Math.random() * Math.PI * 2, float = 0.12 + Math.random() * 0.3;
   return {
     x: Math.random() * W, y: anywhere ? Math.random() * H : -12,
     s: 3.5 + Math.random() * 3.5, r: Math.random() * Math.PI * 2,
     vy: 0.25 + Math.random() * 0.4, vx: 0.15 + Math.random() * 0.3,
     spin: (Math.random() - 0.5) * 0.02, sway: Math.random() * Math.PI * 2,
     a: 0.35 + Math.random() * 0.35,
+    // Where this petal drifts once nothing pulls it down: any direction, slowly.
+    fx: Math.cos(drift) * float, fy: Math.sin(drift) * float,
   };
 }
 
@@ -164,12 +171,22 @@ function drawSky(t) {
   ctx.globalCompositeOperation = "source-over";
   ctx.fillStyle = gradientNow();
   ctx.fillRect(0, 0, W, H);
+  gravity += (gravityTarget - gravity) * 0.015;
+  const g = gravity, f = 1 - g;
   for (const p of petals) {
     if (!reduceMotion) {
-      p.y += p.vy;
-      p.x += p.vx + Math.sin(t / 1400 + p.sway) * 0.25;
-      p.r += p.spin;
-      if (p.y > H + 12 || p.x > W + 12) Object.assign(p, newPetal(false), { x: Math.random() * W * 1.1 - W * 0.2 });
+      p.y += p.vy * g + p.fy * f;
+      p.x += (p.vx + Math.sin(t / 1400 + p.sway) * 0.25) * g + p.fx * f;
+      // Weightless, they tumble a little more.
+      p.r += p.spin * (1 + f * 2);
+      if (g > 0.5) {
+        if (p.y > H + 12 || p.x > W + 12) Object.assign(p, newPetal(false), { x: Math.random() * W * 1.1 - W * 0.2 });
+        else if (p.x < -40 || p.y < -40) Object.assign(p, newPetal(false));
+      } else {
+        // Floating, a petal that leaves on one side comes back on the other.
+        if (p.x < -12) p.x = W + 12; else if (p.x > W + 12) p.x = -12;
+        if (p.y < -12) p.y = H + 12; else if (p.y > H + 12) p.y = -12;
+      }
     }
     ctx.save();
     ctx.translate(p.x, p.y);
@@ -283,6 +300,7 @@ for (const a of document.querySelectorAll("a.fun")) {
     clearTimeout(settleTimer);
     root.classList.remove("settling");
     root.classList.add("floating");
+    gravityTarget = 0;
     const br = bento.getBoundingClientRect(), mx = br.left + br.width / 2, my = br.top + br.height / 2;
     bodies = boxes.map(el => {
       const h = home(el), w = el.offsetWidth, ht = el.offsetHeight;
@@ -305,6 +323,7 @@ for (const a of document.querySelectorAll("a.fun")) {
   function stop() {
     cancelAnimationFrame(raf); raf = 0; grab = null;
     root.classList.add("settling");
+    gravityTarget = 1;
     for (const b of bodies) {
       b.el.classList.remove("grabbed");
       b.el.style.setProperty("--fx", "0px");
