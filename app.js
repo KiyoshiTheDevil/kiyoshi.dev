@@ -246,6 +246,163 @@ for (const a of document.querySelectorAll("a.fun")) {
   });
 }
 
+// ── Zero gravity ─────────────────────────────────────────────────────────────
+// A toy: the compartments drift apart, bump into each other and the window edges, and the pointer
+// shoves them (or grabs and throws one). Positions live in viewport pixels; what is written to the
+// page is only the offset from where the grid would put each compartment, so the grid stays the
+// single source of layout and tidying up is just the offset springing back to zero.
+{
+  const btn = $("float-btn"), label = $("float-label"), bento = document.querySelector(".bento");
+  const boxes = [...bento.children].filter(el => el.classList.contains("box"));
+  const root = document.documentElement;
+  let bodies = [], on = false, raf = 0, last = 0, settleTimer = 0, grab = null;
+  const ptr = { x: -1e4, y: -1e4, lx: -1e4, ly: -1e4, vx: 0, vy: 0, inside: false };
+
+  // Where the grid puts a compartment. offsetLeft/Top ignore transforms, so this holds mid-flight.
+  const home = (el) => { const r = bento.getBoundingClientRect(); return { x: r.left + el.offsetLeft, y: r.top + el.offsetTop }; };
+
+  function start() {
+    clearTimeout(settleTimer);
+    root.classList.remove("settling");
+    root.classList.add("floating");
+    const br = bento.getBoundingClientRect(), cx = br.left + br.width / 2, cy = br.top + br.height / 2;
+    bodies = boxes.map(el => {
+      const h = home(el), w = el.offsetWidth, ht = el.offsetHeight;
+      // Outward from the middle of the box, plus a little chance.
+      const dx = h.x + w / 2 - cx, dy = h.y + ht / 2 - cy, d = Math.hypot(dx, dy) || 1;
+      const sp = 1.2 + Math.random() * 1.4;
+      return {
+        el, w, h: ht, x: h.x, y: h.y, a: 0,
+        vx: dx / d * sp + (Math.random() - .5), vy: dy / d * sp + (Math.random() - .5),
+        va: (Math.random() - .5) * .5, m: (w * ht) / 20000,
+      };
+    });
+    last = performance.now();
+    raf = requestAnimationFrame(step);
+  }
+
+  function stop() {
+    cancelAnimationFrame(raf); raf = 0; grab = null;
+    root.classList.add("settling");
+    for (const b of bodies) {
+      b.el.classList.remove("grabbed");
+      b.el.style.setProperty("--fx", "0px");
+      b.el.style.setProperty("--fy", "0px");
+      b.el.style.setProperty("--fr", "0deg");
+    }
+    settleTimer = setTimeout(() => {
+      root.classList.remove("floating", "settling");
+      for (const b of bodies) for (const p of ["--fx", "--fy", "--fr"]) b.el.style.removeProperty(p);
+      bodies = [];
+    }, 1000);
+  }
+
+  function step(now) {
+    // A frame's timestamp can lie before the click that started the flight. A negative or zero step
+    // would turn the edge springs inside out and fling everything away, so such a frame is skipped.
+    const dt = Math.min(3, (now - last) / 16.67);
+    if (!(dt > 0)) { raf = requestAnimationFrame(step); return; }
+    last = now;
+    const W = window.innerWidth, H = window.innerHeight, M = 8;
+    ptr.vx = (ptr.x - ptr.lx) / dt; ptr.vy = (ptr.y - ptr.ly) / dt; ptr.lx = ptr.x; ptr.ly = ptr.y;
+
+    for (const b of bodies) {
+      if (grab && grab.b === b) {
+        const nx = ptr.x - grab.ox, ny = ptr.y - grab.oy;
+        b.vx = (nx - b.x) / dt; b.vy = (ny - b.y) / dt; b.x = nx; b.y = ny;
+        b.va *= .9; b.a += b.va * dt;
+        continue;
+      }
+      // A shove: the pointer moving across a compartment hands it some of its speed and a turn.
+      if (ptr.inside && !grab && ptr.x > b.x && ptr.x < b.x + b.w && ptr.y > b.y && ptr.y < b.y + b.h) {
+        const k = .45 / Math.sqrt(b.m);
+        b.vx += ptr.vx * k * .5; b.vy += ptr.vy * k * .5;
+        const rx = ptr.x - (b.x + b.w / 2), ry = ptr.y - (b.y + b.h / 2);
+        b.va += (rx * ptr.vy - ry * ptr.vx) / (b.w * b.h) * 6 * k;
+      }
+      // Space has a little air: speed fades slowly, but never to a standstill.
+      b.vx *= Math.pow(.992, dt); b.vy *= Math.pow(.992, dt); b.va *= Math.pow(.985, dt);
+      const s = Math.hypot(b.vx, b.vy);
+      if (s > 28) { b.vx *= 28 / s; b.vy *= 28 / s; }
+      if (s < .15) { b.vx += (Math.random() - .5) * .06; b.vy += (Math.random() - .5) * .06; }
+      b.va = Math.max(-6, Math.min(6, b.va));
+      b.x += b.vx * dt; b.y += b.vy * dt; b.a += b.va * dt;
+
+      // Window edges: bounce when hitting one from inside, drift back in when starting outside.
+      if (b.x < M) { if (b.vx < 0) b.vx = -b.vx * .75; b.x += (M - b.x) * .08 * dt; }
+      if (b.x + b.w > W - M) { if (b.vx > 0) b.vx = -b.vx * .75; b.x -= (b.x + b.w - (W - M)) * .08 * dt; }
+      if (b.y < M) { if (b.vy < 0) b.vy = -b.vy * .75; b.y += (M - b.y) * .08 * dt; }
+      if (b.y + b.h > H - M) { if (b.vy > 0) b.vy = -b.vy * .75; b.y -= (b.y + b.h - (H - M)) * .08 * dt; }
+    }
+
+    // Compartments bump into each other: rectangles, the turn ignored, heavier ones push harder.
+    for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
+      const a = bodies[i], c = bodies[j];
+      const ox = Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x);
+      const oy = Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y);
+      if (ox <= 0 || oy <= 0) continue;
+      const ia = grab && grab.b === a ? 0 : 1 / a.m, ic = grab && grab.b === c ? 0 : 1 / c.m;
+      if (ia + ic === 0) continue;
+      const alongX = ox < oy;
+      const n = alongX ? (a.x + a.w / 2 < c.x + c.w / 2 ? 1 : -1) : (a.y + a.h / 2 < c.y + c.h / 2 ? 1 : -1);
+      const pen = (alongX ? ox : oy) / (ia + ic);
+      const rv = alongX ? (c.vx - a.vx) * n : (c.vy - a.vy) * n;
+      if (alongX) { a.x -= n * pen * ia; c.x += n * pen * ic; } else { a.y -= n * pen * ia; c.y += n * pen * ic; }
+      if (rv < 0) {
+        const jn = -1.8 * rv / (ia + ic);
+        if (alongX) { a.vx -= jn * ia * n; c.vx += jn * ic * n; } else { a.vy -= jn * ia * n; c.vy += jn * ic * n; }
+        a.va += (Math.random() - .5) * jn * ia * .3; c.va += (Math.random() - .5) * jn * ic * .3;
+      }
+    }
+
+    for (const b of bodies) {
+      const h = home(b.el);
+      b.el.style.setProperty("--fx", `${(b.x - h.x).toFixed(1)}px`);
+      b.el.style.setProperty("--fy", `${(b.y - h.y).toFixed(1)}px`);
+      b.el.style.setProperty("--fr", `${b.a.toFixed(2)}deg`);
+    }
+    raf = requestAnimationFrame(step);
+  }
+
+  btn.addEventListener("click", () => {
+    on = !on;
+    btn.setAttribute("aria-pressed", String(on));
+    label.textContent = on ? "tidy up" : "zero gravity";
+    on ? start() : stop();
+  });
+
+  window.addEventListener("pointermove", (e) => {
+    if (!ptr.inside) { ptr.lx = e.clientX; ptr.ly = e.clientY; }
+    ptr.x = e.clientX; ptr.y = e.clientY; ptr.inside = true;
+    if (grab && Math.hypot(e.clientX - grab.sx, e.clientY - grab.sy) > 4) grab.moved = true;
+  });
+  document.documentElement.addEventListener("pointerleave", () => { ptr.inside = false; });
+
+  // Grab and throw. A drag that moved is not a click, so the link underneath does not open.
+  bento.addEventListener("pointerdown", (e) => {
+    if (!on || e.button !== 0) return;
+    const b = bodies.find(b => b.el.contains(e.target));
+    if (!b) return;
+    ptr.x = ptr.lx = e.clientX; ptr.y = ptr.ly = e.clientY; ptr.inside = true;
+    grab = { b, ox: e.clientX - b.x, oy: e.clientY - b.y, sx: e.clientX, sy: e.clientY, moved: false };
+    b.el.classList.add("grabbed");
+  });
+  const release = () => {
+    if (!grab) return;
+    grab.b.el.classList.remove("grabbed");
+    if (grab.moved) window.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); }, { capture: true, once: true });
+    grab = null;
+  };
+  window.addEventListener("pointerup", release);
+  window.addEventListener("pointercancel", release);
+  bento.addEventListener("dragstart", (e) => { if (on) e.preventDefault(); });
+  document.addEventListener("visibilitychange", () => {
+    if (!on) return;
+    if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
+    else if (!raf) { last = performance.now(); raf = requestAnimationFrame(step); }
+  });
+}
+
 // A different face each visit, like the share page.
 $("lb-kao").textContent = SILENCE[Math.floor(Math.random() * SILENCE.length)];
 

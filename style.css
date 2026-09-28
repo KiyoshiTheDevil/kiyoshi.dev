@@ -22,6 +22,7 @@
   --glass-light: rgba(255, 255, 255, .10);
   --r: 20px;
   --gap: 12px;
+  --spring: linear(0, .009, .035 2.1%, .141 4.4%, .723 12.9%, .938 16.7%, 1.017 19.4%, 1.067, 1.099 24.9%, 1.108 26.6%, 1.1, 1.077 31.9%, 1.004 37.9%, .98 42%, .975 45.9%, .99 55.5%, 1.001 62.7%, 1.004 70%, 1);
   --font: "Zen Kaku Gothic New", -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -86,7 +87,6 @@ a { color: inherit; text-decoration: none; }
   transition: background-color .18s ease;
 }
 a.box {
-  --spring: linear(0, .009, .035 2.1%, .141 4.4%, .723 12.9%, .938 16.7%, 1.017 19.4%, 1.067, 1.099 24.9%, 1.108 26.6%, 1.1, 1.077 31.9%, 1.004 37.9%, .98 42%, .975 45.9%, .99 55.5%, 1.001 62.7%, 1.004 70%, 1);
   transform: perspective(900px) translateY(var(--lift)) scale(var(--sc)) rotateX(var(--rx)) rotateY(var(--ry));
   transition: --lift .6s var(--spring), --sc .6s var(--spring),
               --rx .22s ease-out, --ry .22s ease-out, background-color .18s ease;
@@ -218,7 +218,35 @@ a.box:hover::after { opacity: 1; }
 .clock-time { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .clock-zone { font-size: 12px; color: var(--muted); }
 
-.foot { color: rgba(239, 236, 244, .45); font-size: 12px; margin-top: 28px; }
+.foot { color: rgba(239, 236, 244, .45); font-size: 12px; margin-top: 28px; display: flex; align-items: center; gap: 14px; }
+
+/* ── Zero gravity ─────────────────────────────────────────────────────────── */
+.float-btn {
+  font: inherit; font-size: 12px; color: rgba(239, 236, 244, .7); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px 4px 9px; border-radius: 99px;
+  background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .12);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  transition: background-color .18s ease, color .18s ease, transform .4s var(--spring);
+}
+.float-btn:hover { background: rgba(255, 255, 255, .11); color: var(--text); transform: translateY(-2px); }
+.float-btn:active { transform: scale(.94); }
+.float-btn:focus-visible { outline: 2px solid var(--sakura); outline-offset: 2px; }
+.float-ico { color: var(--sakura); display: inline-block; transition: transform .6s var(--spring); }
+.float-btn[aria-pressed="true"] .float-ico { transform: rotate(180deg) scale(1.2); }
+
+/* While floating, each compartment carries its own offset and turn. The hover lift and tilt of the
+   link compartments stay, applied inside the drift. */
+html.floating { overflow: hidden; }
+.floating .bento { touch-action: none; user-select: none; -webkit-user-select: none; }
+.floating .box { transform: translate(var(--fx, 0px), var(--fy, 0px)) rotate(var(--fr, 0deg)); cursor: grab; }
+.floating a.box {
+  transform: translate(var(--fx, 0px), var(--fy, 0px)) rotate(var(--fr, 0deg))
+             perspective(900px) translateY(var(--lift)) scale(var(--sc)) rotateX(var(--rx)) rotateY(var(--ry));
+}
+.floating .box.grabbed { cursor: grabbing; z-index: 5; }
+.floating img { -webkit-user-drag: none; }
+/* Back into the grid: one springy flight home. */
+.settling .box { transition: transform .95s var(--spring) !important; }
 
 /* ── Narrow screens: the profile column becomes a strip across the top ───── */
 @media (max-width: 760px) {
@@ -250,4 +278,5 @@ a.box:hover::after { opacity: 1; }
   .live.is-live .dot { animation: none; }
   .fun:hover .ch { animation: none; }
   .fun::after { transition: opacity .2s ease; transform: none; }
+  .float-btn { display: none; }
 }
