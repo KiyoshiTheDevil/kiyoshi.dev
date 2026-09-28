@@ -182,6 +182,25 @@ a.box:hover::after { opacity: 1; }
 .soon::before { display: none; }   /* keeps its dashes, no gradient edge */
 .soon .project-name { color: var(--text); opacity: .75; }
 
+/* ── Playful text links: letters hop one after another, a kaomoji pops out ── */
+.fun { position: relative; display: inline-block; }
+.fun .ch { display: inline-block; }
+.fun:hover .ch { animation: hop .5s cubic-bezier(.3, 1.6, .5, 1) both; animation-delay: calc(var(--i) * 32ms); }
+@keyframes hop { 0% { transform: translateY(0); } 40% { transform: translateY(-5px); } 100% { transform: translateY(0); } }
+
+/* Beside the link by default; above it where a neighbour sits beside it. */
+.fun::after {
+  content: attr(data-kao);
+  position: absolute; left: calc(100% + 10px); top: 50%;
+  transform: translateY(-50%) scale(.3) rotate(-25deg);
+  opacity: 0; pointer-events: none; white-space: nowrap;
+  font-size: 12.5px; font-weight: 500;
+  transition: transform .38s cubic-bezier(.3, 1.7, .5, 1), opacity .2s ease;
+}
+.fun:hover::after { transform: translateY(-50%) scale(1) rotate(0); opacity: 1; }
+.contact .fun::after { left: 50%; top: auto; bottom: calc(100% + 4px); transform: translateX(-50%) scale(.3) rotate(-20deg); color: var(--sakura); }
+.contact .fun:hover::after { transform: translateX(-50%) scale(1) rotate(0); }
+
 /* ── Contact ─────────────────────────────────────────────────────────────── */
 .contact { grid-area: contact; display: flex; align-items: center; gap: 22px; font-size: 14px; color: var(--muted); }
 .contact a:hover { color: var(--text); }
@@ -219,10 +238,15 @@ a.box:hover::after { opacity: 1; }
   .tagline { margin-bottom: 10px; }
   .socials { flex-direction: row; flex-wrap: wrap; gap: 4px 14px; }
   .contact { flex-wrap: wrap; gap: 8px 18px; }
+  /* The social links sit in a row here, so their kaomoji go above them too. */
+  .socials .fun::after { left: 50%; top: auto; bottom: calc(100% + 2px); transform: translateX(-50%) scale(.3) rotate(-20deg); }
+  .socials .fun:hover::after { transform: translateX(-50%) scale(1) rotate(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   a.box, .box { transition: none; }
   a.box, a.box:hover, a.box:active { transform: none; }
   .live.is-live .dot { animation: none; }
+  .fun:hover .ch { animation: none; }
+  .fun::after { transition: opacity .2s ease; }
 }

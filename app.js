@@ -229,6 +229,23 @@ if (window.matchMedia("(hover: hover) and (pointer: fine)").matches && !reduceMo
   }
 }
 
+// ── Playful links ────────────────────────────────────────────────────────────
+// Each letter in its own span so they can hop one after the other. The link keeps its name for
+// screen readers through aria-label, since a word read out letter by letter is no name at all.
+for (const a of document.querySelectorAll("a.fun")) {
+  const text = a.textContent;
+  a.setAttribute("aria-label", text);
+  a.textContent = "";
+  [...text].forEach((c, i) => {
+    const span = document.createElement("span");
+    span.className = "ch";
+    span.style.setProperty("--i", i);
+    span.setAttribute("aria-hidden", "true");
+    span.textContent = c === " " ? "\u00a0" : c;
+    a.appendChild(span);
+  });
+}
+
 // A different face each visit, like the share page.
 $("lb-kao").textContent = SILENCE[Math.floor(Math.random() * SILENCE.length)];
 
