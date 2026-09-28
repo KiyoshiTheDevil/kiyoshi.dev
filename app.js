@@ -59,19 +59,36 @@ async function updateListening() {
 }
 
 // ── Twitch ───────────────────────────────────────────────────────────────────
+// decapi spells the uptime out ("1 hour, 26 minutes, 45 seconds"); the compartment wants "1h 26m".
+function shortUptime(text) {
+  const part = (unit) => Number((text.match(new RegExp(`(\\d+) ${unit}`)) || [])[1] || 0);
+  const d = part("day"), h = part("hour") + d * 24, m = part("minute");
+  if (!h && !m) return "a moment";
+  return h ? `${h}h ${m}m` : `${m}m`;
+}
+
 // decapi answers "<name> is offline" when offline and an uptime otherwise.
 async function updateLive() {
   try {
     const uptime = await getText(`https://decapi.me/twitch/uptime/${TWITCH_USER}`);
     const live = !/offline/i.test(uptime) && !/error|not found/i.test(uptime);
     $("live").classList.toggle("is-live", live);
+    $("live-watch").hidden = !live;
     if (live) {
-      const game = await getText(`https://decapi.me/twitch/game/${TWITCH_USER}`).catch(() => "");
-      $("live-state").textContent = "Live on Twitch";
-      $("live-game").textContent = game || `for ${uptime}`;
+      const [game, viewers] = await Promise.all([
+        getText(`https://decapi.me/twitch/game/${TWITCH_USER}`).catch(() => ""),
+        getText(`https://decapi.me/twitch/viewercount/${TWITCH_USER}`).catch(() => ""),
+      ]);
+      const count = /^\d+$/.test(viewers) ? Number(viewers) : null;
+      $("live-meta").textContent = count === null ? "live" : count.toLocaleString("en-US");
+      $("live-word").hidden = count === null;
+      $("live-title").textContent = game || "Live on Twitch";
+      $("live-sub").textContent = `live for ${shortUptime(uptime)}`;
     } else {
-      $("live-state").textContent = "Offline";
-      $("live-game").textContent = "twitch.tv/" + TWITCH_USER;
+      $("live-meta").textContent = "offline";
+      $("live-word").hidden = true;
+      $("live-title").textContent = "zzz… (ᴗ_ᴗ)";
+      $("live-sub").textContent = "twitch.tv/" + TWITCH_USER;
     }
   } catch { /* keep what is shown */ }
 }
