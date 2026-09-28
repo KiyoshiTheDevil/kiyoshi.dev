@@ -303,7 +303,17 @@ if (window.matchMedia("(hover: hover) and (pointer: fine)").matches && !reduceMo
   for (const el of document.querySelectorAll("a.box")) {
     el.addEventListener("pointermove", (e) => {
       const r = el.getBoundingClientRect();
-      const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+      let px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+      // Floating, a compartment may be turned: its bounding box is then larger and upright, and
+      // the light would land beside the pointer. Turn the pointer back into the compartment's own
+      // frame instead. It turns about its centre, which is also the centre of its bounding box.
+      const turn = document.documentElement.classList.contains("floating") && parseFloat(el.style.getPropertyValue("--fr"));
+      if (turn) {
+        const a = -turn * Math.PI / 180, w = el.offsetWidth, h = el.offsetHeight;
+        const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+        px = (dx * Math.cos(a) - dy * Math.sin(a) + w / 2) / w;
+        py = (dx * Math.sin(a) + dy * Math.cos(a) + h / 2) / h;
+      }
       const max = Math.max(6, Math.min(14, 4200 / r.width));
       el.style.setProperty("--rx", `${((0.5 - py) * max).toFixed(2)}deg`);
       el.style.setProperty("--ry", `${((px - 0.5) * max).toFixed(2)}deg`);
