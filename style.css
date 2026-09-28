@@ -186,7 +186,10 @@ a.box:hover::after { opacity: 1; }
 .kodama { grid-area: kodama; padding-bottom: 0; }
 .kodama:hover { background: var(--glass-hover); }
 .project-head { display: flex; align-items: center; justify-content: space-between; }
-.project-logo { height: 20px; width: auto; }
+/* All three logos show their lettering at the same height, 20px. The files draw it at different
+   shares of their height (Kodama 33.3 of 48, Tsukumo 44 of 48, Kodama Remote 33.3 of 56, with the
+   REMOTE line below), so each gets its own height to match. */
+.project-logo { height: 28.8px; width: auto; }
 .project-desc { font-size: 13.5px; color: var(--muted); margin: 10px 0 14px; max-width: 420px; }
 .shot {
   display: block; width: 100%; margin-top: auto;
@@ -205,8 +208,8 @@ a.box:hover::after { opacity: 1; }
 .soon .project-name { color: var(--text); opacity: .75; }
 /* The logos stand in for the names; quiet like the rest of a compartment that is not out yet. */
 .soon-logo { display: block; align-self: flex-start; width: auto; max-width: 100%; opacity: .8; margin-bottom: 6px; }
-.tsukumo-logo { height: 22px; }
-.remote-logo { width: 150px; height: auto; }   /* the REMOTE line is small in the artwork; this keeps it legible */
+.tsukumo-logo { height: 21.8px; }
+.remote-logo { height: 33.6px; }
 
 /* ── Playful text links: letters hop one after another, a kaomoji pops out ── */
 .fun { display: inline-block; }
