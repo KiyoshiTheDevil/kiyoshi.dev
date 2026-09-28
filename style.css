@@ -206,7 +206,7 @@ a.box:hover::after { opacity: 1; }
 /* The logos stand in for the names; quiet like the rest of a compartment that is not out yet. */
 .soon-logo { display: block; align-self: flex-start; width: auto; max-width: 100%; opacity: .8; margin-bottom: 6px; }
 .tsukumo-logo { height: 22px; }
-.remote-logo { height: 30px; }
+.remote-logo { width: 150px; height: auto; }   /* the REMOTE line is small in the artwork; this keeps it legible */
 
 /* ── Playful text links: letters hop one after another, a kaomoji pops out ── */
 .fun { display: inline-block; }
