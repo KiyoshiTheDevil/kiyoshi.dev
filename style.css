@@ -72,7 +72,10 @@ a { color: inherit; text-decoration: none; }
 }
 .box {
   background: var(--glass);
-  border: 1px solid var(--glass-edge);
+  border: 0;
+  /* The edge colours: light from the top left, the compartment's own tint at the bottom right. */
+  --edge-a: rgba(255, 255, 255, .34);
+  --edge-b: rgba(231, 132, 159, .30);
   box-shadow: inset 0 1px 0 var(--glass-light);
   -webkit-backdrop-filter: blur(18px) saturate(1.3);
   backdrop-filter: blur(18px) saturate(1.3);
@@ -92,6 +95,16 @@ a.box {
 a.box:hover { --lift: -6px; --sc: 1.025; }
 a.box:active { --lift: -2px; --sc: .975; transition-duration: .12s, .12s, .22s, .22s, .18s; }
 
+/* A gradient outline. CSS borders cannot take a gradient and keep rounded corners, so the edge is
+   a layer of its own: a gradient the size of the box, with everything but a 1px ring masked away. */
+.box::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(135deg, var(--edge-a), rgba(255, 255, 255, .05) 42%, rgba(255, 255, 255, .03) 60%, var(--edge-b));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+
 /* Light that follows the pointer across the glass. */
 a.box::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
@@ -107,6 +120,8 @@ a.box:hover::after { opacity: 1; }
   grid-area: profile;
   background: rgba(231, 132, 159, .82);
   color: var(--sakura-ink);
+  --edge-a: rgba(255, 230, 238, .75);
+  --edge-b: rgba(255, 255, 255, .20);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -134,7 +149,7 @@ a.box:hover::after { opacity: 1; }
 .artist { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── Live ────────────────────────────────────────────────────────────────── */
-.live { grid-area: live; background: rgba(78, 98, 160, .26); border-color: rgba(150, 170, 230, .22); color: var(--ai-ink); display: flex; flex-direction: column; justify-content: space-between; }
+.live { grid-area: live; background: rgba(78, 98, 160, .26); --edge-b: rgba(150, 170, 235, .55); color: var(--ai-ink); display: flex; flex-direction: column; justify-content: space-between; }
 .live .kicker { color: var(--ai-ink); font-weight: 500; font-size: 13px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(223, 229, 251, .35); flex-shrink: 0; }
 .live.is-live .dot { background: var(--shu); box-shadow: 0 0 0 0 rgba(226, 75, 74, .6); animation: pulse 1.8s infinite; }
@@ -159,11 +174,12 @@ a.box:hover::after { opacity: 1; }
 .badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 99px; }
 .badge-alpha { background: #34502a; color: #cfe9bf; }
 
-.tsukumo { grid-area: tsukumo; background: rgba(143, 181, 115, .20); border-color: rgba(170, 210, 140, .24); color: #d9edc9; justify-content: flex-end; }
+.tsukumo { grid-area: tsukumo; background: rgba(143, 181, 115, .20); --edge-b: rgba(170, 215, 135, .55); color: #d9edc9; justify-content: flex-end; }
 .soon {
   grid-area: soon; background: rgba(18, 16, 22, .25); border: 1.5px dashed var(--line); color: var(--muted); box-shadow: none;
   justify-content: flex-end;
 }
+.soon::before { display: none; }   /* keeps its dashes, no gradient edge */
 .soon .project-name { color: var(--text); opacity: .75; }
 
 /* ── Contact ─────────────────────────────────────────────────────────────── */
