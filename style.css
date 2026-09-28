@@ -174,9 +174,11 @@ a.box:hover::after { opacity: 1; }
 .badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 99px; }
 .badge-alpha { background: #34502a; color: #cfe9bf; }
 
-.tsukumo { grid-area: tsukumo; background: rgba(143, 181, 115, .20); --edge-b: rgba(170, 215, 135, .55); color: #d9edc9; justify-content: flex-end; }
+/* Coming soon: dashed and quiet. The look is shared; where each sits in the grid is its own. */
+.tsukumo { grid-area: tsukumo; }
+.remote { grid-area: soon; }
 .soon {
-  grid-area: soon; background: rgba(18, 16, 22, .25); border: 1.5px dashed var(--line); color: var(--muted); box-shadow: none;
+  background: rgba(18, 16, 22, .25); border: 1.5px dashed var(--line); color: var(--muted); box-shadow: none;
   justify-content: flex-end;
 }
 .soon::before { display: none; }   /* keeps its dashes, no gradient edge */
