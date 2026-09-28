@@ -566,6 +566,64 @@ for (const a of document.querySelectorAll("a.fun")) {
   });
 }
 
+// ── Suggested streamers ──────────────────────────────────────────────────────
+// A hand of cards that fans out of the Twitch compartment while Kiyoshi is offline. Pictures and
+// live state come from decapi, like the rest of the compartment. Pictures load a moment after the
+// page, so the hand is ready before anyone reaches it; live state is asked when someone does.
+const FRIENDS = ["LMary52", "GreekGeekGames", "niwwu", "Warfu_"];
+{
+  const hand = $("suggest");
+  const spread = 16;   // degrees between two cards
+  const cards = FRIENDS.map((name, i) => {
+    const a = document.createElement("a");
+    a.className = "s-card";
+    a.href = `https://twitch.tv/${name.toLowerCase()}`;
+    a.target = "_blank"; a.rel = "noopener";
+    a.title = name;
+    a.style.setProperty("--i", i);
+    a.style.setProperty("--rot", `${((i - (FRIENDS.length - 1) / 2) * spread).toFixed(1)}deg`);
+    a.innerHTML = `<span class="s-av"><span>${name[0].toUpperCase()}</span></span><span class="s-name"></span>`;
+    a.querySelector(".s-name").textContent = name;
+    hand.appendChild(a);
+    return { name, a };
+  });
+
+  setTimeout(() => {
+    for (const c of cards) {
+      getText(`https://decapi.me/twitch/avatar/${c.name}`).then((url) => {
+        if (!/^https:\/\/static-cdn\.jtvnw\.net\//.test(url)) return;
+        const img = new Image();
+        img.alt = ""; img.decoding = "async"; img.src = url;
+        img.onload = () => c.a.querySelector(".s-av").replaceChildren(img);
+      }).catch(() => {});
+    }
+  }, 1200);
+
+  let asked = 0;
+  const askLive = () => {
+    if (Date.now() - asked < 120_000) return;
+    asked = Date.now();
+    for (const c of cards) {
+      getText(`https://decapi.me/twitch/uptime/${c.name}`).then((t) => {
+        const live = !/offline/i.test(t) && !/error|not found/i.test(t);
+        c.a.classList.toggle("is-live", live);
+        c.a.title = live ? `${c.name} is live` : c.name;
+      }).catch(() => {});
+    }
+  };
+  // The Twitch compartment sits at the right edge of the box. In a narrow window the hand would
+  // reach past the window, so it slides left just far enough to stay whole.
+  const HALF_HAND = 208;   // from the middle of the hand to the far edge of its outer card, measured
+  const fit = () => {
+    const r = $("live").getBoundingClientRect(), mid = r.left + r.width / 2;
+    const over = mid + HALF_HAND - (document.documentElement.clientWidth - 12);
+    hand.style.setProperty("--shift", `${Math.round(-Math.max(0, over))}px`);
+  };
+  $("live").addEventListener("pointerenter", () => { fit(); askLive(); });
+  hand.addEventListener("focusin", fit);
+  hand.addEventListener("focusin", askLive);
+}
+
 // A different face each visit, like the share page.
 $("lb-kao").textContent = SILENCE[Math.floor(Math.random() * SILENCE.length)];
 
