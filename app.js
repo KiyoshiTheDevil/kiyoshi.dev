@@ -7,7 +7,7 @@ const LISTENBRAINZ_USER = "KiyoshiTheDevil";
 const TWITCH_USER = "kiyoshi_the_devil";
 // Where Kiyoshi is. The clock and the sky both follow this, not the visitor's own time.
 const TIMEZONE = "Europe/Berlin";
-const TIMEZONE_LABEL = "Berlin";
+const TIMEZONE_LABEL = "my time rn";
 const REFRESH_MS = 60_000;
 
 const $ = (id) => document.getElementById(id);
