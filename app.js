@@ -207,6 +207,28 @@ if (reduceMotion) setInterval(() => drawSky(0), 60_000);
 updateClock();
 setInterval(updateClock, 15_000);
 
+// ── Hover tilt ───────────────────────────────────────────────────────────────
+// Each link compartment leans a little toward the pointer, and the light follows it. Only for a
+// real pointer: on touch there is no hover, and a tilt stuck from the last tap looks broken.
+// The lean is smaller on wide compartments, where the same angle moves the far edge much more.
+if (window.matchMedia("(hover: hover) and (pointer: fine)").matches && !reduceMotion) {
+  for (const el of document.querySelectorAll("a.box")) {
+    el.addEventListener("pointermove", (e) => {
+      const r = el.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+      const max = Math.max(6, Math.min(14, 4200 / r.width));
+      el.style.setProperty("--rx", `${((0.5 - py) * max).toFixed(2)}deg`);
+      el.style.setProperty("--ry", `${((px - 0.5) * max).toFixed(2)}deg`);
+      el.style.setProperty("--mx", `${(px * 100).toFixed(1)}%`);
+      el.style.setProperty("--my", `${(py * 100).toFixed(1)}%`);
+    });
+    el.addEventListener("pointerleave", () => {
+      el.style.removeProperty("--rx");
+      el.style.removeProperty("--ry");
+    });
+  }
+}
+
 // A different face each visit, like the share page.
 $("lb-kao").textContent = SILENCE[Math.floor(Math.random() * SILENCE.length)];
 
