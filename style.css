@@ -134,7 +134,7 @@ a.box:hover::after { opacity: 1; }
 .artist { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── Live ────────────────────────────────────────────────────────────────── */
-.live { grid-area: live; background: rgba(58, 74, 122, .72); color: var(--ai-ink); display: flex; flex-direction: column; justify-content: space-between; }
+.live { grid-area: live; background: rgba(78, 98, 160, .26); border-color: rgba(150, 170, 230, .22); color: var(--ai-ink); display: flex; flex-direction: column; justify-content: space-between; }
 .live .kicker { color: var(--ai-ink); font-weight: 500; font-size: 13px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(223, 229, 251, .35); flex-shrink: 0; }
 .live.is-live .dot { background: var(--shu); box-shadow: 0 0 0 0 rgba(226, 75, 74, .6); animation: pulse 1.8s infinite; }
@@ -159,7 +159,7 @@ a.box:hover::after { opacity: 1; }
 .badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 99px; }
 .badge-alpha { background: #34502a; color: #cfe9bf; }
 
-.tsukumo { grid-area: tsukumo; background: rgba(143, 181, 115, .82); color: var(--matcha-ink); justify-content: flex-end; }
+.tsukumo { grid-area: tsukumo; background: rgba(143, 181, 115, .20); border-color: rgba(170, 210, 140, .24); color: #d9edc9; justify-content: flex-end; }
 .soon {
   grid-area: soon; background: rgba(18, 16, 22, .25); border: 1.5px dashed var(--line); color: var(--muted); box-shadow: none;
   justify-content: flex-end;
