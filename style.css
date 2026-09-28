@@ -171,8 +171,6 @@ a.box:hover::after { opacity: 1; }
   border-radius: 12px 12px 0 0; border: 1px solid #34303d; border-bottom: 0;
   object-fit: cover; object-position: top; height: 150px;
 }
-.badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 99px; }
-.badge-alpha { background: #34502a; color: #cfe9bf; }
 
 /* Coming soon: dashed and quiet. The look is shared; where each sits in the grid is its own. */
 .tsukumo { grid-area: tsukumo; }

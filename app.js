@@ -8,7 +8,9 @@ const TWITCH_USER = "kiyoshi_the_devil";
 // Where Kiyoshi is. The clock and the sky both follow this, not the visitor's own time.
 const TIMEZONE = "Europe/Berlin";
 const TIMEZONE_LABEL = "my time rn";
-const REFRESH_MS = 60_000;
+// A song lasts a few minutes, so the listening compartment asks often; a stream changes rarely.
+const LISTENING_MS = 15_000;
+const LIVE_MS = 60_000;
 
 const $ = (id) => document.getElementById(id);
 
@@ -540,11 +542,17 @@ for (const a of document.querySelectorAll("a.fun")) {
 // A different face each visit, like the share page.
 $("lb-kao").textContent = SILENCE[Math.floor(Math.random() * SILENCE.length)];
 
+// Nothing is fetched while the page cannot be seen. Windows also counts a browser window that is
+// fully covered by another one as hidden, so coming back to the page (a tab switch, the window in
+// front again, a click into it) asks at once instead of waiting for the next round.
 function refresh() {
   if (document.hidden) return;
   updateListening();
   updateLive();
 }
 refresh();
-setInterval(refresh, REFRESH_MS);
+setInterval(() => { if (!document.hidden) updateListening(); }, LISTENING_MS);
+setInterval(() => { if (!document.hidden) updateLive(); }, LIVE_MS);
 document.addEventListener("visibilitychange", refresh);
+window.addEventListener("focus", refresh);
+window.addEventListener("pageshow", (e) => { if (e.persisted) refresh(); });
