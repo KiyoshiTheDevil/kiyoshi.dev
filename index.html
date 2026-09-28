@@ -13,6 +13,9 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- The sky behind the box: follows the time of day where Kiyoshi is, with falling petals -->
+  <canvas id="sky" aria-hidden="true"></canvas>
+
   <main class="bento">
 
     <!-- Profile: a tall column on wide screens, a strip across the top on narrow ones -->
@@ -65,6 +68,19 @@
       <span class="project-name">Kodama Remote</span>
       <span class="project-sub">For Android · coming soon</span>
     </div>
+
+    <section class="box clock" aria-label="Local time for Kiyoshi">
+      <svg viewBox="0 0 40 40" class="clock-face" aria-hidden="true">
+        <circle cx="20" cy="20" r="18.5" class="ring"/>
+        <line id="clock-h" x1="20" y1="20" x2="20" y2="11" class="hand hour"/>
+        <line id="clock-m" x1="20" y1="20" x2="20" y2="6" class="hand minute"/>
+        <circle cx="20" cy="20" r="1.6" class="pin"/>
+      </svg>
+      <div class="clock-body">
+        <span class="clock-time" id="clock-time">--:--</span>
+        <span class="clock-zone" id="clock-zone">Berlin</span>
+      </div>
+    </section>
 
     <section class="box contact">
       <a href="https://discord.gg/PzSsPF7KW" target="_blank" rel="noopener">Discord</a>

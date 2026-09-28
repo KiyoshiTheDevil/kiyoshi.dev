@@ -15,6 +15,11 @@
   --ai:     #3a4a7a;   --ai-ink:     #dfe5fb;
   --shu:    #e24b4a;
 
+  /* Glass: what sits behind shows through, blurred. Tinted glass for the coloured compartments. */
+  --glass: rgba(34, 31, 41, .52);
+  --glass-hover: rgba(46, 42, 56, .6);
+  --glass-edge: rgba(255, 255, 255, .09);
+  --glass-light: rgba(255, 255, 255, .10);
   --r: 20px;
   --gap: 12px;
   --font: "Zen Kaku Gothic New", -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -22,6 +27,8 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
+#sky { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 0; display: block; }
+.bento, .foot { position: relative; z-index: 1; }
 body {
   background: var(--ground);
   color: var(--text);
@@ -31,6 +38,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* Centred both ways: the box sits in the middle of the window, the footer below it. */
+  justify-content: center;
   padding: 48px 20px 24px;
   -webkit-font-smoothing: antialiased;
 }
@@ -50,10 +59,14 @@ a { color: inherit; text-decoration: none; }
     "profile listening listening live"
     "profile kodama    kodama    tsukumo"
     "profile kodama    kodama    soon"
-    "profile contact   contact   contact";
+    "profile contact   contact   clock";
 }
 .box {
-  background: var(--box);
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  box-shadow: inset 0 1px 0 var(--glass-light);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
   border-radius: var(--r);
   padding: 18px 20px;
   overflow: hidden;
@@ -67,7 +80,7 @@ a.box:hover { transform: translateY(-2px); }
 /* ── Profile ─────────────────────────────────────────────────────────────── */
 .profile {
   grid-area: profile;
-  background: var(--sakura);
+  background: rgba(231, 132, 159, .82);
   color: var(--sakura-ink);
   display: flex;
   flex-direction: column;
@@ -83,7 +96,7 @@ a.box:hover { transform: translateY(-2px); }
 
 /* ── Now listening ───────────────────────────────────────────────────────── */
 .listening { grid-area: listening; display: flex; align-items: center; gap: 16px; }
-.listening:hover { background: var(--box-hover); }
+.listening:hover { background: var(--glass-hover); }
 .cover {
   width: 72px; height: 72px; flex-shrink: 0; border-radius: 12px;
   background: #34303d center / cover no-repeat;
@@ -96,7 +109,7 @@ a.box:hover { transform: translateY(-2px); }
 .artist { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── Live ────────────────────────────────────────────────────────────────── */
-.live { grid-area: live; background: var(--ai); color: var(--ai-ink); display: flex; flex-direction: column; justify-content: space-between; }
+.live { grid-area: live; background: rgba(58, 74, 122, .72); color: var(--ai-ink); display: flex; flex-direction: column; justify-content: space-between; }
 .live .kicker { color: var(--ai-ink); font-weight: 500; font-size: 13px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(223, 229, 251, .35); flex-shrink: 0; }
 .live.is-live .dot { background: var(--shu); box-shadow: 0 0 0 0 rgba(226, 75, 74, .6); animation: pulse 1.8s infinite; }
@@ -109,7 +122,7 @@ a.box:hover { transform: translateY(-2px); }
 .project-sub { font-size: 12.5px; opacity: .8; margin-top: 2px; }
 
 .kodama { grid-area: kodama; padding-bottom: 0; }
-.kodama:hover { background: var(--box-hover); }
+.kodama:hover { background: var(--glass-hover); }
 .project-head { display: flex; align-items: center; justify-content: space-between; }
 .project-logo { height: 20px; width: auto; }
 .project-desc { font-size: 13.5px; color: var(--muted); margin: 10px 0 14px; max-width: 420px; }
@@ -121,9 +134,9 @@ a.box:hover { transform: translateY(-2px); }
 .badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 99px; }
 .badge-alpha { background: #34502a; color: #cfe9bf; }
 
-.tsukumo { grid-area: tsukumo; background: var(--matcha); color: var(--matcha-ink); justify-content: flex-end; }
+.tsukumo { grid-area: tsukumo; background: rgba(143, 181, 115, .82); color: var(--matcha-ink); justify-content: flex-end; }
 .soon {
-  grid-area: soon; background: transparent; border: 1.5px dashed var(--line); color: var(--muted);
+  grid-area: soon; background: rgba(18, 16, 22, .25); border: 1.5px dashed var(--line); color: var(--muted); box-shadow: none;
   justify-content: flex-end;
 }
 .soon .project-name { color: var(--text); opacity: .75; }
@@ -132,18 +145,30 @@ a.box:hover { transform: translateY(-2px); }
 .contact { grid-area: contact; display: flex; align-items: center; gap: 22px; font-size: 14px; color: var(--muted); }
 .contact a:hover { color: var(--text); }
 
-.foot { color: var(--faint); font-size: 12px; margin-top: 28px; }
+/* ── Clock ───────────────────────────────────────────────────────────────── */
+.clock { grid-area: clock; display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.clock-face { width: 40px; height: 40px; flex-shrink: 0; }
+.clock-face .ring { fill: rgba(255, 255, 255, .04); stroke: rgba(255, 255, 255, .22); stroke-width: 1; }
+.clock-face .hand { stroke: var(--text); stroke-linecap: round; transform-origin: 20px 20px; }
+.clock-face .hour { stroke-width: 2.4; }
+.clock-face .minute { stroke-width: 1.6; opacity: .8; }
+.clock-face .pin { fill: var(--sakura); }
+.clock-body { display: flex; flex-direction: column; line-height: 1.2; }
+.clock-time { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.clock-zone { font-size: 12px; color: var(--muted); }
+
+.foot { color: rgba(239, 236, 244, .45); font-size: 12px; margin-top: 28px; }
 
 /* ── Narrow screens: the profile column becomes a strip across the top ───── */
 @media (max-width: 760px) {
   body { padding: 20px 14px; }
   .bento {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: auto 96px 96px 260px 110px auto;
+    grid-template-rows: auto 96px 80px 260px 110px auto;
     grid-template-areas:
       "profile   profile"
       "listening listening"
-      "live      live"
+      "live      clock"
       "kodama    kodama"
       "tsukumo   soon"
       "contact   contact";
