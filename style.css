@@ -297,6 +297,14 @@ a.box:hover::after { opacity: 1; }
    REMOTE line below), so each gets its own height to match. */
 .project-logo { height: 28.8px; width: auto; }
 .project-desc { font-size: 13.5px; color: var(--muted); margin: 10px 0 14px; max-width: 420px; }
+/* Ofuda: out in the open like Kodama (it has its own page), with a badge saying the app is not. */
+.ofuda { grid-area: soon; justify-content: space-between; }
+.ofuda:hover { background: var(--glass-hover); }
+.ofuda .project-head { gap: 10px; }
+.ofuda-logo { height: 20px; width: auto; }   /* the lettering fills the file's whole height */
+.ofuda .project-desc { margin: 0; font-size: 12.5px; }
+.badge { flex-shrink: 0; font-size: 11px; font-weight: 600; letter-spacing: .02em; padding: 4px 9px; border-radius: 99px;
+  color: #2a1420; background: rgba(231, 132, 159, .9); }
 .shot {
   display: block; width: 100%; margin-top: auto;
   border-radius: 12px 12px 0 0; border: 1px solid #34303d; border-bottom: 0;
@@ -305,7 +313,6 @@ a.box:hover::after { opacity: 1; }
 
 /* Coming soon: dashed and quiet. The look is shared; where each sits in the grid is its own. */
 .tsukumo { grid-area: tsukumo; }
-.remote { grid-area: soon; }
 .soon {
   background: rgba(18, 16, 22, .25); border: 1.5px dashed var(--line); color: var(--muted); box-shadow: none;
   justify-content: flex-end;
@@ -315,7 +322,6 @@ a.box:hover::after { opacity: 1; }
 /* The logos stand in for the names; quiet like the rest of a compartment that is not out yet. */
 .soon-logo { display: block; align-self: flex-start; width: auto; max-width: 100%; opacity: .8; margin-bottom: 6px; }
 .tsukumo-logo { height: 21.8px; }
-.remote-logo { height: 33.6px; }
 
 /* ── Playful text links: letters hop one after another, a kaomoji pops out ── */
 .fun { display: inline-block; }
